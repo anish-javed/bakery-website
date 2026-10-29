@@ -70,7 +70,7 @@
   }
   function renderSlots() {
     var sel = $("slot"), cur = sel.value, today = $("date").value === CC.todayPK(), now = CC.nowPKMinutes(), any = false;
-    var html = '<option value="">Choose a time slot</option>';
+    var html = '<option value="Any time">Any time</option>';
     s.slots.forEach(function (sl) {
       var st = slotStart(sl), off = today && st != null && st < now + 60;
       if (!off) any = true;
@@ -78,7 +78,7 @@
     });
     sel.innerHTML = html;
     if (cur && s.slots.indexOf(cur) > -1) sel.value = cur;
-    if (today && !any) $("date-hint").textContent = "No slots are left today. Please pick another day.";
+    if (today && !any && s.slots.length) $("date-hint").textContent = "No time slots are left today. You can still choose Any time, or pick another day.";
   }
 
   /* ---------- rendering ---------- */
@@ -139,7 +139,10 @@
     var ls = lines(), c = CC.calc(ls, method(), s), n = ls.reduce(function (a, l) { return a + l.qty; }, 0);
     var h = '<div class="sumrow"><span>Subtotal (' + n + " item" + (n === 1 ? "" : "s") + ")</span><span>" + CC.fmt(c.subtotal) + "</span></div>" +
       '<div class="sumrow"><span>' + (method() === "Delivery" ? "Delivery fee" : "Pickup") + "</span><span>" + (method() === "Delivery" ? CC.fmt(c.fee) : "Free") + "</span></div>";
-    if (s.discountPct > 0) h += '<div class="sumrow disc"><span>Online discount (' + s.discountPct + "%)</span><span>&minus;" + CC.fmt(c.discount) + "</span></div>";
+    if (s.discountPct > 0) {
+      h += '<div class="sumrow"><span>Bill before discount</span><span>' + CC.fmt(c.subtotal + c.fee) + "</span></div>" +
+        '<div class="sumrow disc"><span>Online discount (' + s.discountPct + "% off the total bill)</span><span>&minus;" + CC.fmt(c.discount) + "</span></div>";
+    }
     h += '<div class="sumrow total"><span>Total</span><span>' + CC.fmt(c.total) + "</span></div>";
     $("summary").innerHTML = h;
     var bp = $("bill-promo");
@@ -197,14 +200,13 @@
   /* ---------- submit ---------- */
   function validate() {
     var bad = [], del = method() === "Delivery";
-    var name = $("name").value.trim(), phone = $("phone").value.trim(), date = $("date").value, slot = $("slot").value;
+    var name = $("name").value.trim(), phone = $("phone").value.trim(), date = $("date").value;
     function chk(id, ok, msg) { setErr(id, !ok, msg); if (!ok) bad.push(id); }
     chk("name", name.length >= 2);
     chk("phone", /^03\d{2}-\d{7}$/.test(phone));
     if (del) { chk("area", !!$("area").value); chk("address", $("address").value.trim().length >= 8); }
     var min = minDate();
     chk("date", !!date && date >= min && date <= CC.addDays(CC.todayPK(), 90), !date ? "Please pick a date." : "Earliest date is " + CC.fmtDate(min) + ".");
-    chk("slot", !!slot);
     return bad;
   }
 
@@ -214,7 +216,7 @@
       items: ls.map(function (l) { return l.kind === "cake" ? { cake: { size: l.cake.size, flavour: l.cake.flavour, frosting: l.cake.frosting, message: l.cake.message || "" }, qty: l.qty } : { name: l.name, qty: l.qty }; }),
       name: $("name").value.trim(), phone: $("phone").value.trim(), method: method(),
       area: del ? $("area").value : "", address: del ? $("address").value.trim() : "",
-      date: $("date").value, slot: $("slot").value, payment: payment(), notes: $("notes").value.trim(),
+      date: $("date").value, slot: $("slot").value || "Any time", payment: payment(), notes: $("notes").value.trim(),
       expectedTotal: CC.calc(ls, method(), s).total,
       hp: $("hp").value, elapsed: Date.now() - formStart
     };
@@ -249,7 +251,7 @@
   /* ---------- thank-you ---------- */
   function success(res, payload) {
     var ls = lines();
-    CC.store.last.set({ no: res.orderNo, t: Date.now(), phone: payload.phone, total: res.total, items: ls.map(function (l) { return l.kind === "cake" ? { cake: l.cake, qty: l.qty } : { name: l.name, qty: l.qty }; }) });
+    CC.store.last.set({ no: res.orderNo, t: Date.now(), phone: payload.phone, method: payload.method, total: res.total, items: ls.map(function (l) { return l.kind === "cake" ? { cake: l.cake, qty: l.qty } : { name: l.name, qty: l.qty }; }) });
     CC.store.set("customer", { name: payload.name, phone: payload.phone });
     done = true;
     CC.cart.clear();
@@ -258,7 +260,7 @@
     (res.items || []).forEach(function (i) { wa.push(i.qty + " x " + i.label + " = " + CC.fmt(i.lineTotal)); });
     wa.push("", "Subtotal: " + CC.fmt(res.subtotal));
     if (res.deliveryFee) wa.push("Delivery fee: " + CC.fmt(res.deliveryFee));
-    if (res.discount) wa.push("Online discount: -" + CC.fmt(res.discount));
+    if (res.discount) wa.push("Online discount (on items + delivery): -" + CC.fmt(res.discount));
     wa.push("Total: " + CC.fmt(res.total), "");
     wa.push(payload.method === "Delivery" ? "Delivery to: " + payload.area + ", " + payload.address : "Pickup from the bakery");
     wa.push("Date: " + CC.fmtDate(payload.date) + ", " + payload.slot, "Payment: " + payload.payment, "Name: " + payload.name, "Phone: " + payload.phone);
@@ -266,7 +268,8 @@
     var items = (res.items || []).map(function (i) { return '<div class="sumrow"><span>' + i.qty + " &times; " + esc(i.label) + "</span><span>" + CC.fmt(i.lineTotal) + "</span></div>"; }).join("");
     var bill = items + '<div class="sumrow"><span>Subtotal</span><span>' + CC.fmt(res.subtotal) + "</span></div>" +
       '<div class="sumrow"><span>' + (payload.method === "Delivery" ? "Delivery fee" : "Pickup") + "</span><span>" + (res.deliveryFee ? CC.fmt(res.deliveryFee) : "Free") + "</span></div>" +
-      (res.discount ? '<div class="sumrow disc"><span>Online discount</span><span>&minus;' + CC.fmt(res.discount) + "</span></div>" : "") +
+      (res.discount ? '<div class="sumrow"><span>Bill before discount</span><span>' + CC.fmt(res.subtotal + (res.deliveryFee || 0)) + "</span></div>" +
+        '<div class="sumrow disc"><span>Online discount' + (s.discountPct > 0 ? " (" + s.discountPct + "% off the total bill)" : "") + "</span><span>&minus;" + CC.fmt(res.discount) + "</span></div>" : "") +
       '<div class="sumrow total"><span>Total</span><span>' + CC.fmt(res.total) + "</span></div>";
 
     var note = res.total !== payload.expectedTotal ? '<div class="alert warn">Some prices changed since you added your items. This is your final total.</div>' : "";

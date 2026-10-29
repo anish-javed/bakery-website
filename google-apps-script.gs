@@ -20,7 +20,7 @@ var TZ = 'Asia/Karachi'; // Pakistan time, used only for DISPLAY. Order times ar
 var TAB = { PRODUCTS: 'Products', OPTIONS: 'Cake Options', SETTINGS: 'Settings', ORDERS: 'Orders' };
 
 var CATEGORIES = ['Cakes', 'Pastries & Patties', 'Pizzas & Sandwiches', 'Snacks', 'Breads & Rusks', 'Milk & Dairy', 'Juices & Drinks', 'Ice Cream', 'Cookies & Biscuits', 'Birthday Decor'];
-var STATUSES = ['Received', 'Baking', 'Out for delivery', 'Delivered', 'Cancelled'];
+var STATUSES = ['Received', 'Baking', 'Out for delivery', 'Ready for pickup', 'Delivered', 'Collected', 'Cancelled'];
 
 var PRODUCT_HEADERS = ['Name', 'Category', 'Price PKR', 'Unit', 'Description', 'Photo URL', 'Available', 'Featured', 'Delivery', 'Popularity'];
 var OPTION_HEADERS = ['Type', 'Name', 'Price PKR', 'Pounds', 'What the price means'];
@@ -38,12 +38,12 @@ var SETTING_ROWS = [
   ['Address', 'Main Boulevard, Gulberg III, Lahore', 'Shown on the website and as the pickup address.'],
   ['Opening Hours', 'Mon to Thu: 9 am - 11 pm; Fri to Sun: 9 am - 12 midnight', 'Put a semicolon (;) between lines.'],
   ['Delivery Fee', '250', 'In rupees. Only charged on delivery orders.'],
-  ['Online Discount %', '5', 'Taken off the items total for orders placed on the website. Type 0 to switch it off.'],
+  ['Online Discount %', '5', 'Taken off the TOTAL bill (items + delivery fee) for orders placed on the website. Type 0 to switch it off.'],
   ['Cake Notice Days', '2', 'How many days ahead a custom cake must be ordered.'],
   ['Accepting Orders', 'Yes', 'Type No to stop taking orders for a while (for example during Eid rush).'],
   ['Cash On Delivery', 'Yes', 'Yes = people can pay cash. No = only bank transfer / JazzCash.'],
   ['Delivery Areas', 'Gulberg, DHA, Johar Town, Model Town, Cantt, Bahria Town, Faisal Town, Wapda Town, Garden Town, Iqbal Town, Samanabad, Township', 'Areas in the checkout list. Put a comma between areas.'],
-  ['Time Slots', '10:00 am - 12:00 pm, 12:00 pm - 2:00 pm, 2:00 pm - 4:00 pm, 4:00 pm - 6:00 pm, 6:00 pm - 8:00 pm, 8:00 pm - 10:00 pm', 'Delivery and pickup times. Put a comma between slots. Write am or pm.'],
+  ['Time Slots', '10:00 am - 12:00 pm, 12:00 pm - 2:00 pm, 2:00 pm - 4:00 pm, 4:00 pm - 6:00 pm, 6:00 pm - 8:00 pm, 8:00 pm - 10:00 pm', 'Delivery and pickup times. Put a comma between slots. Write am or pm. Customers can also choose "Any time".'],
   ['Bank Name', 'Demo Bank Ltd', 'Shown at checkout when someone pays by bank transfer.'],
   ['Account Title', 'Crumbs and Co.', ''],
   ['Account Number', '0000-0000000000', ''],
@@ -179,6 +179,126 @@ Cake Knife and Server|Birthday Decor|300|set of 2|Plastic knife and server for n
 Gift Box with Ribbon|Birthday Decor|250|per piece|A pretty box and ribbon for your gift.|Yes|No|Yes|29
 `;
 
+// Sample photos from Pexels: product name | Pexels photo ID
+var PHOTO_DATA = `
+Chocolate Fudge Cake|12118046
+Black Forest Cake|8802102
+Red Velvet Cake|38774006
+Pineapple Fresh Cream Cake|13963474
+Vanilla Butterscotch Cake|4161223
+Chocolate Truffle Cake|34802628
+Mango Mousse Cake|15730548
+Coffee Walnut Cake|3734026
+Lotus Biscoff Cake|19164207
+Plain Dry Cake|36590626
+Chicken Patty|17104937
+Chicken Cheese Patty|34463146
+Beef Patty|37297542
+Aloo Patty|5881017
+Vegetable Puff|27304312
+Chicken Roll|31357500
+Chocolate Pastry|11333387
+Fresh Cream Pastry|16402066
+Almond Croissant|37970772
+Cinnamon Roll|5662362
+Chicken Tikka Pizza|5639547
+Fajita Pizza|29173102
+Pepperoni Feast Pizza|31587831
+Cheese Lovers Pizza|36178132
+BBQ Chicken Pizza|33458051
+Club Sandwich|15362507
+Chicken Mayo Sandwich|12469931
+Grilled Chicken Sub|34593399
+Veggie Garden Sandwich|39528128
+Zinger Burger|8769141
+Chicken Samosa|29037272
+Vegetable Samosa|9027521
+Chicken Spring Rolls|35407775
+Chicken Nuggets|11710530
+Masala Fries|29150162
+Bun Kabab|4080532
+Cheese Straws|31388412
+Pizza Pockets|13457628
+Mixed Pakora Box|29547418
+Nimko Mix|17480807
+Milk Bread|8811604
+Brown Bread|12284683
+Multigrain Loaf|30767682
+Sourdough Loaf|8633662
+Garlic Bread|37043987
+Burger Buns|37229322
+Dinner Rolls|32695358
+Pita Bread|6419742
+Cake Rusk|19993438
+Suji Rusk|37439225
+Fresh Milk|4578396
+Chocolate Milk|4035107
+Strawberry Milk|8284685
+Dahi (Yogurt)|6823328
+Sweet Lassi|18142603
+Salted Butter|7966354
+Fresh Malai|4686826
+Paneer|29631468
+Cheese Slices|16015736
+Mozzarella Cheese|6605173
+Fresh Orange Juice|14510445
+Mango Shake|5817621
+Strawberry Shake|9450011
+Oreo Shake|17429505
+Cold Coffee|4869290
+Mint Margarita|39536485
+Fresh Lemonade|7360957
+Mixed Fruit Juice|31822992
+Hot Chocolate|35210027
+Cola Can|8879622
+Chocolate Chip Cookies|40292914
+Oatmeal Raisin Cookies|10688029
+Peanut Butter Cookies|11325078
+Naan Khatai|3370702
+Zeera Biscuits|14757523
+Coconut Biscuits|30984652
+Almond Biscotti|8621806
+Butter Shortbread|797761
+Double Chocolate Brownie|15106329
+Macarons|38876021
+Vanilla Ice Cream|16962446
+Chocolate Ice Cream|5061214
+Strawberry Ice Cream|7518550
+Mango Kulfi|12295184
+Pistachio Kulfi|11409329
+Choc Chip Cone|38987559
+Brownie Sundae|36032863
+Falooda Ice Cream|18646641
+Ice Cream Sandwich|6431575
+Ice Cream Cake|31756481
+Birthday Candles|11308365
+Golden Number Candle|7826349
+Sparkler Candles|13640960
+Happy Birthday Topper|32397324
+Balloon Bouquet|574282
+Birthday Banner|7099956
+Party Hats|7180255
+Party Poppers|8516711
+Cake Knife and Server|8791082
+Gift Box with Ribbon|13975271
+`;
+
+function photoUrl_(id) { return 'https://images.pexels.com/photos/' + id + '/pexels-photo-' + id + '.jpeg?auto=compress&cs=tinysrgb&w=600'; }
+
+// Sample photo link for a product name, or '' when we have none.
+var photoMap_ = null;
+function photoFor_(name) {
+  if (!photoMap_) {
+    photoMap_ = {};
+    PHOTO_DATA.trim().split('\n').forEach(function (line) {
+      var f = line.split('|');
+      if (f.length === 2) photoMap_[norm_(f[0])] = f[1].trim();
+    });
+  }
+  var id = photoMap_[norm_(name)];
+  return id ? photoUrl_(id) : '';
+}
+
 /* ======================================================================
    SETUP  (run this once, from the Apps Script editor)
    ====================================================================== */
@@ -207,6 +327,40 @@ function setup() {
   } catch (e) { /* ignore */ }
 }
 
+/**
+ * Run this ONCE from the Apps Script editor to add the sample Pexels photos.
+ * It fills the Photo URL column ONLY where it is empty. Photos you added yourself are never changed.
+ */
+function addSamplePhotos() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(TAB.PRODUCTS);
+  var msg;
+  if (!sh || sh.getLastRow() < 2) {
+    msg = 'The Products tab is empty. Please run setup first.';
+  } else {
+    var head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim().toLowerCase(); });
+    var nameCol = head.indexOf('name'), photoCol = head.indexOf('photo url');
+    if (nameCol < 0 || photoCol < 0) {
+      msg = 'Could not find the Name and Photo URL columns in the Products tab.';
+    } else {
+      var rows = sh.getLastRow() - 1;
+      var names = sh.getRange(2, nameCol + 1, rows, 1).getValues();
+      var photoRange = sh.getRange(2, photoCol + 1, rows, 1);
+      var photos = photoRange.getValues();
+      var filled = 0;
+      for (var i = 0; i < rows; i++) {
+        if (String(photos[i][0]).trim() !== '') continue; // already has a photo: leave it alone
+        var url = photoFor_(names[i][0]);
+        if (url) { photos[i][0] = url; filled++; }
+      }
+      if (filled) photoRange.setNumberFormat('@').setValues(photos);
+      CacheService.getScriptCache().remove('all_v1'); // so the website sees the photos straight away
+      msg = 'Done! Added ' + filled + ' photo' + (filled === 1 ? '' : 's') + '. Products that already had a photo were not changed.';
+    }
+  }
+  try { SpreadsheetApp.getUi().alert(msg); } catch (e) { console.log(msg); }
+}
+
 function getOrCreate_(ss, name) { return ss.getSheetByName(name) || ss.insertSheet(name); }
 
 function ensureRows_(sh, rows) {
@@ -231,7 +385,7 @@ function setupProducts_(ss) {
   if (fresh) {
     var rows = PRODUCT_DATA.trim().split('\n').map(function (line) {
       var f = line.split('|');
-      return [f[0], f[1], Number(f[2]), f[3], f[4], '', f[5], f[6], f[7], Number(f[8])];
+      return [f[0], f[1], Number(f[2]), f[3], f[4], photoFor_(f[0]), f[5], f[6], f[7], Number(f[8])];
     });
     sh.getRange(2, 1, rows.length, PRODUCT_HEADERS.length).setValues(rows);
   }
@@ -288,7 +442,7 @@ function setupOrders_(ss) {
   widths.forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
   var rng = sh.getRange('B2:B5001');
   function rule(text, bg) { return SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(text).setBackground(bg).setRanges([rng]).build(); }
-  sh.setConditionalFormatRules([rule('Received', '#fff0cf'), rule('Baking', '#fde3c4'), rule('Out for delivery', '#dbeafe'), rule('Delivered', '#d9f0dc'), rule('Cancelled', '#f9d6d0')]);
+  sh.setConditionalFormatRules([rule('Received', '#fff0cf'), rule('Baking', '#fde3c4'), rule('Out for delivery', '#dbeafe'), rule('Ready for pickup', '#dbeafe'), rule('Delivered', '#d9f0dc'), rule('Collected', '#d9f0dc'), rule('Cancelled', '#f9d6d0')]);
   sh.getRange(1, OC.MS + 1).setNote('Time the order arrived, in UTC milliseconds. This is the true time (it never changes with time zones). The Pakistan time next to it is for reading.');
 }
 
@@ -436,35 +590,51 @@ function getAllCached_() {
 }
 
 /**
- * Track an order. The visitor must give the order number AND the phone number.
- * Only the status and the order time are ever returned. Wrong guesses are limited.
+ * Track an order. The visitor must give the PHONE number. The order number is optional.
+ *   phone only      -> that phone's orders from the last 30 days (newest first): order number, date and status ONLY.
+ *   phone + order   -> that one order: status, date and Delivery/Pickup (so the right steps are shown).
+ * Names, addresses and items are NEVER returned. Wrong tries are limited per phone number.
  */
 function trackOrder_(orderNo, phone) {
-  var generic = { ok: false, error: 'We could not find an order with these details. Please check the order number and phone number.' };
   var cache = CacheService.getScriptCache();
-  var no = String(orderNo || '').toUpperCase().replace(/[^A-Z0-9\-]/g, '').slice(0, 14);
   var ph = digits_(phone);
   if (/^92/.test(ph) && ph.length >= 12) ph = '0' + ph.slice(2);
-  if (!no || ph.length < 10) return generic;
-  if (no.indexOf('-') === -1) no = no.replace(/^([A-Z]+)(\d+)$/, '$1-$2');
+  if (ph.length < 10) return fail_('Please type the phone number you used when ordering.');
+  var tail = ph.slice(-10);
 
-  var key = 'trk_' + no, all = 'trk_all';
+  var no = String(orderNo || '').toUpperCase().replace(/[^A-Z0-9\-]/g, '').slice(0, 14);
+  if (no && no.indexOf('-') === -1) no = no.replace(/^([A-Z]+)(\d+)$/, '$1-$2');
+
+  var key = 'trk_p_' + tail, all = 'trk_all'; // lockout is counted per phone number
   var fails = Number(cache.get(key) || 0), allFails = Number(cache.get(all) || 0);
-  if (fails >= 5 || allFails >= 150) return { ok: false, error: 'Too many tries. Please wait 15 minutes, or call us.' };
+  if (fails >= 5 || allFails >= 150) return fail_('Too many tries. Please wait 15 minutes, or call us.');
 
+  var found = null, list = [];
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB.ORDERS);
   if (sh && sh.getLastRow() > 1) {
     var vals = sh.getRange(2, 1, sh.getLastRow() - 1, ORDER_HEADERS.length).getValues();
-    for (var i = vals.length - 1; i >= 0; i--) {
-      if (String(vals[i][OC.NO]).toUpperCase() !== no) continue;
-      if (digits_(vals[i][OC.PHONE]).slice(-10) !== ph.slice(-10)) break; // right number, wrong phone: treated as not found
-      var st = String(vals[i][OC.STATUS]).trim();
-      cache.remove(key);
-      return { ok: true, status: STATUSES.indexOf(st) > -1 ? st : 'Received', orderTime: Number(vals[i][OC.MS]) || null };
+    var cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+    for (var i = vals.length - 1; i >= 0; i--) { // newest rows are at the bottom
+      var r = vals[i];
+      if (digits_(r[OC.PHONE]).slice(-10) !== tail) continue;
+      var st = String(r[OC.STATUS]).trim(), ms = Number(r[OC.MS]) || null;
+      var order = { no: String(r[OC.NO]).trim(), status: STATUSES.indexOf(st) > -1 ? st : 'Received', orderTime: ms };
+      if (no) {
+        if (order.no.toUpperCase() === no) { order.method = r[OC.METHOD] === 'Pickup' ? 'Pickup' : 'Delivery'; found = order; break; }
+      } else if (ms && ms >= cutoff && list.length < 30) {
+        list.push(order);
+      }
     }
   }
+
+  if (no ? found : list.length) {
+    try { cache.remove(key); } catch (e) { /* ignore */ }
+    if (no) return { ok: true, mode: 'one', orderNo: found.no, status: found.status, orderTime: found.orderTime, method: found.method };
+    return { ok: true, mode: 'list', orders: list };
+  }
   try { cache.put(key, String(fails + 1), 900); cache.put(all, String(allFails + 1), 600); } catch (e) { /* ignore */ }
-  return generic;
+  return fail_(no ? 'We could not find an order with these details. Please check the order number and phone number.'
+                  : 'We could not find any orders for this phone number in the last 30 days. Please check the number, or type your order number too.');
 }
 
 /* ======================================================================
@@ -519,9 +689,10 @@ function placeOrder_(d) {
   var payment = String(d.payment || '');
   if (payment !== BANK && !(payment === 'Cash on Delivery' && set.cod)) return fail_('Please choose how you will pay.');
 
+  // The time slot is optional. When none is chosen we save "Any time".
   var slot = safeText_(d.slot, 40);
-  if (set.slots.length && set.slots.map(function (s) { return s.toLowerCase(); }).indexOf(slot.toLowerCase()) === -1) return fail_('Please choose a time slot.');
-  if (!slot) return fail_('Please choose a time slot.');
+  if (!slot || slot.toLowerCase() === 'any time') slot = 'Any time';
+  else if (set.slots.length && set.slots.map(function (s) { return s.toLowerCase(); }).indexOf(slot.toLowerCase()) === -1) return fail_('Please choose a time slot from the list, or choose Any time.');
   var date = String(d.date || '');
   if (!validDate_(date)) return fail_('Please pick a date.');
   var today = todayPK_();
@@ -564,7 +735,7 @@ function placeOrder_(d) {
 
   // 4. Totals, worked out here and nowhere else
   var fee = method === 'Delivery' ? set.fee : 0;
-  var discount = Math.round(subtotal * set.discountPct / 100);
+  var discount = Math.round((subtotal + fee) * set.discountPct / 100); // the online discount applies to the TOTAL bill: items + delivery fee
   var total = subtotal + fee - discount;
   var notes = safeText_(d.notes, 200);
 
@@ -608,7 +779,7 @@ function placeOrder_(d) {
           (method === 'Delivery' ? 'Area: ' + area + '\nAddress: ' + address + '\n' : '') +
           'Needed on: ' + date + ', ' + slot + '\nPayment: ' + payment + '\n\n' +
           lines.map(function (l) { return l.qty + ' x ' + l.label + ' = ' + money_(l.lineTotal); }).join('\n') + '\n\n' +
-          'Subtotal: ' + money_(subtotal) + '\nDelivery fee: ' + money_(fee) + '\nOnline discount: -' + money_(discount) + '\nTOTAL: ' + money_(total) + '\n\n' +
+          'Subtotal: ' + money_(subtotal) + '\nDelivery fee: ' + money_(fee) + '\nOnline discount (' + set.discountPct + '% of items + delivery): -' + money_(discount) + '\nTOTAL: ' + money_(total) + '\n\n' +
           (notes ? 'Notes: ' + notes + '\n\n' : '') +
           (payment === BANK ? 'This customer will pay by bank transfer / JazzCash. Please confirm the payment before baking.\n\n' : '') +
           'Open the Orders tab to change the status: ' + SpreadsheetApp.getActiveSpreadsheet().getUrl()

@@ -102,7 +102,7 @@
   CC.calc = function (lines, method, settings) {
     var subtotal = lines.reduce(function (n, l) { return n + l.price * l.qty; }, 0);
     var fee = method === "Delivery" && lines.length ? settings.deliveryFee : 0;
-    var discount = Math.round(subtotal * (settings.discountPct || 0) / 100);
+    var discount = Math.round((subtotal + fee) * (settings.discountPct || 0) / 100); // the discount is taken off the whole bill: items + delivery fee
     return { subtotal: subtotal, fee: fee, discount: discount, total: subtotal + fee - discount };
   };
 

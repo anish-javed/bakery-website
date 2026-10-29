@@ -111,7 +111,7 @@
     });
     var n = (CC.store.get("demoNo", 1000)) + 1;
     CC.store.set("demoNo", n);
-    var fee = p.method === "Delivery" ? d.settings.deliveryFee : 0, disc = Math.round(subtotal * d.settings.discountPct / 100);
+    var fee = p.method === "Delivery" ? d.settings.deliveryFee : 0, disc = Math.round((subtotal + fee) * d.settings.discountPct / 100);
     return { ok: true, demo: true, orderNo: "DEMO-" + n, subtotal: subtotal, deliveryFee: fee, discount: disc, total: subtotal + fee - disc, items: items };
   }
 
@@ -120,20 +120,30 @@
     return fetchJson(cfg.SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }, 30000);
   };
 
+  // The phone number is required. The order number is optional:
+  //   phone only    -> { ok, mode: "list", orders: [{ no, status, orderTime }] }  (last 30 days, newest first)
+  //   phone + order -> { ok, mode: "one", orderNo, status, orderTime, method }
+  // Tracking answers are never taken from the browser cache.
   CC.track = function (orderNo, phone) {
+    orderNo = String(orderNo || "").trim();
     if (!cfg.SCRIPT_URL) {
       return new Promise(function (resolve) {
         setTimeout(function () {
-          var l = CC.store.last.get();
-          var same = l && String(l.no).toLowerCase() === String(orderNo).toLowerCase().trim() && String(l.phone || "").replace(/\D/g, "").slice(-10) === String(phone).replace(/\D/g, "").slice(-10);
-          if (same) {
-            var age = Date.now() - l.t, status = age < 60000 ? "Received" : age < 180000 ? "Baking" : age < 300000 ? "Out for delivery" : "Delivered";
-            resolve({ ok: true, status: status, orderTime: l.t, demo: true });
-          } else resolve({ ok: false, error: "We could not find an order with these details. Please check the order number and phone number." });
+          var l = CC.store.last.get(), tail = function (v) { return String(v || "").replace(/\D/g, "").slice(-10); };
+          if (!l || tail(l.phone) !== tail(phone)) return resolve({ ok: false, error: orderNo ? "We could not find an order with these details. Please check the order number and phone number." : "We could not find any orders for this phone number in the last 30 days. Please check the number, or type your order number too." });
+          var age = Date.now() - l.t, pickup = l.method === "Pickup";
+          var status = age < 60000 ? "Received" : age < 180000 ? "Baking" : age < 300000 ? (pickup ? "Ready for pickup" : "Out for delivery") : (pickup ? "Collected" : "Delivered");
+          if (orderNo) {
+            if (String(l.no).toLowerCase() !== orderNo.toLowerCase()) return resolve({ ok: false, error: "We could not find an order with these details. Please check the order number and phone number." });
+            return resolve({ ok: true, mode: "one", orderNo: l.no, status: status, orderTime: l.t, method: pickup ? "Pickup" : "Delivery", demo: true });
+          }
+          if (age > 30 * 86400000) return resolve({ ok: false, error: "We could not find any orders for this phone number in the last 30 days. Please check the number, or type your order number too." });
+          resolve({ ok: true, mode: "list", orders: [{ no: l.no, status: status, orderTime: l.t }], demo: true });
         }, 600);
       });
     }
-    return fetchJson(withQuery("action=track&order=" + encodeURIComponent(orderNo) + "&phone=" + encodeURIComponent(phone)), {}, 20000);
+    var q = "action=track&phone=" + encodeURIComponent(phone) + (orderNo ? "&order=" + encodeURIComponent(orderNo) : "") + "&_=" + Date.now();
+    return fetchJson(withQuery(q), { cache: "no-store" }, 20000);
   };
 
   CC.waLink = function (text) {

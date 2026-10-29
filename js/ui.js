@@ -95,7 +95,7 @@
       '<div><h4>Visit and call</h4><ul><li id="f-addr"></li><li id="f-phone"></li><li id="f-hours"></li></ul></div>' +
       "<div><h4>Quick links</h4><ul>" + LINKS.map(function (l) { return '<li><a href="' + l[0] + '">' + esc(l[1]) + "</a></li>"; }).join("") + '<li><a href="cart.html">Cart &amp; Checkout</a></li></ul></div>' +
       '<div><h4>Order online</h4><p id="f-promo">Order online and save on your total bill.</p><a class="btn btn-rose btn-sm" href="menu.html">See the menu</a></div>' +
-      '</div><div class="demo-note">' + esc((window.CC_CONFIG || {}).DEMO_LINE || "This is a demo website.") + "</div></div></footer>" +
+      '</div><div class="demo-note">' + esc((window.CC_CONFIG || {}).DEMO_LINE || "This is a demo website.") + '</div><div class="foot-credit">Photos: <a href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a></div></div></footer>' +
       '<a class="wa-float" id="wa-float" href="https://wa.me/923000000000" target="_blank" rel="noopener" aria-label="Chat with us on WhatsApp">' + icons.wa + "<span>Chat with us</span></a>";
     document.body.insertAdjacentHTML("beforeend", foot);
 

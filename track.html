@@ -17,21 +17,21 @@
   <div class="container page-head center">
     <span class="hand">Where are my treats?</span>
     <h1 style="font-size:clamp(2rem,5vw,3rem)">Track your order</h1>
-    <p style="margin-left:auto;margin-right:auto">Type your order number and the phone number you used when ordering.</p>
+    <p style="margin-left:auto;margin-right:auto">Type the phone number you used when ordering. Add your order number to see just that one order.</p>
   </div>
 
   <div class="container track-box" style="padding-bottom:30px">
     <form class="panel" id="track-form" novalidate>
       <div class="row two">
         <div class="field">
-          <label for="no">Order number</label>
-          <input id="no" type="text" placeholder="CC-1001" autocomplete="off" autocapitalize="characters" maxlength="14">
-          <div class="err">Please type your order number, like CC-1001.</div>
-        </div>
-        <div class="field">
           <label for="phone">Phone number</label>
           <input id="phone" type="tel" inputmode="numeric" placeholder="03XX-XXXXXXX" autocomplete="tel-national" maxlength="12">
           <div class="err">Please type your mobile number like 0300-1234567.</div>
+        </div>
+        <div class="field">
+          <label for="no">Order number <span class="muted" style="font-weight:700">(optional)</span></label>
+          <input id="no" type="text" placeholder="CC-1001" autocomplete="off" autocapitalize="characters" maxlength="14">
+          <div class="err">Please type the order number like CC-1001, or leave it empty.</div>
         </div>
       </div>
       <button class="btn btn-rose btn-block" id="go" type="submit">Track my order</button>

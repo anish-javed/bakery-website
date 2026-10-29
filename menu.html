@@ -15,13 +15,17 @@
 
 <main>
   <div class="container page-head">
-    <span class="hand">Everything we bake</span>
     <h1 style="font-size:clamp(2rem,5vw,3rem)">Our menu</h1>
+    <p id="menu-sub" class="menu-sub">Fresh from our oven in Lahore</p>
     <div class="promo-card hidden" id="menu-promo" style="margin-top:10px"></div>
   </div>
 
   <div class="catbar-wrap" id="catbar-wrap" hidden>
-    <div class="catbar" id="catbar" role="tablist" aria-label="Categories"></div>
+    <div class="catbar-shell" id="catbar-shell">
+      <button class="cat-arrow left" id="cat-prev" type="button" aria-label="Scroll categories left" hidden>&#8249;</button>
+      <div class="catbar" id="catbar" role="tablist" aria-label="Categories"></div>
+      <button class="cat-arrow right" id="cat-next" type="button" aria-label="Scroll categories right" hidden>&#8250;</button>
+    </div>
   </div>
 
   <div class="container">

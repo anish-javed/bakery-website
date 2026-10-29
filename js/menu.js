@@ -20,11 +20,16 @@
     var promo = CC.promoText();
     if (promo) { var pc = $("menu-promo"); pc.innerHTML = CC.art.icons.tag + "<div><b>" + esc(promo) + "</b></div>"; pc.classList.remove("hidden"); }
 
+    var n = d.products.length, c = d.categories.length;
+    $("menu-sub").textContent = n + " fresh item" + (n === 1 ? "" : "s") + " in " + c + " categor" + (c === 1 ? "y" : "ies") + ", baked in Lahore";
+
     buildCatBar();
     buildSpecials();
     $("q").value = state.q; $("sort").value = state.sort; $("stock").checked = state.stock;
     $("catbar-wrap").hidden = false;
-    markCat(true); // scroll the bar to the chosen category now that it is visible
+    $("catbar").scrollLeft = 0; // always start at the left, so "All" and "Cakes" are visible
+    markCat(true); // only scrolls if a category from the link is out of view
+    updateArrows();
     $("menu-app").hidden = false;
     updateFavUI();
     refresh();
@@ -43,18 +48,35 @@
       state.cat = b.getAttribute("data-cat");
       markCat(false); refresh(true);
     });
+    // Left/right arrows (shown on desktop only, and only when the bar is wider than the screen)
+    bar.addEventListener("scroll", updateArrows, { passive: true });
+    window.addEventListener("resize", updateArrows);
+    $("cat-prev").addEventListener("click", function () { slideBar(-1); });
+    $("cat-next").addEventListener("click", function () { slideBar(1); });
   }
+  function slideBar(dir) {
+    var bar = $("catbar"), by = Math.max(160, Math.round(bar.clientWidth * 0.7)) * dir;
+    bar.scrollBy ? bar.scrollBy({ left: by, behavior: "smooth" }) : (bar.scrollLeft += by);
+  }
+  function updateArrows() {
+    var bar = $("catbar"), max = bar.scrollWidth - bar.clientWidth;
+    $("cat-prev").hidden = !(max > 4 && bar.scrollLeft > 4);
+    $("cat-next").hidden = !(max > 4 && bar.scrollLeft < max - 4);
+  }
+  // Marks the chosen category. The bar only scrolls when that button is cut off (never to the middle).
   function markCat(instant) {
-    var active = null;
-    $("catbar").querySelectorAll(".cat-btn").forEach(function (b) {
+    var active = null, bar = $("catbar");
+    bar.querySelectorAll(".cat-btn").forEach(function (b) {
       var on = b.getAttribute("data-cat") === state.cat;
       b.classList.toggle("active", on); b.setAttribute("aria-selected", on);
       if (on) active = b;
     });
-    if (active && active.scrollIntoView) {
-      var bar = $("catbar"), target = active.offsetLeft - (bar.clientWidth - active.offsetWidth) / 2;
-      bar.scrollTo ? bar.scrollTo({ left: Math.max(0, target), behavior: instant ? "auto" : "smooth" }) : (bar.scrollLeft = target);
-    }
+    if (!active) return;
+    var br = bar.getBoundingClientRect(), ar = active.getBoundingClientRect(), pad = 16, by = 0;
+    if (!br.width) return; // bar is hidden for now
+    if (ar.left < br.left + pad) by = ar.left - br.left - pad;
+    else if (ar.right > br.right - pad) by = ar.right - br.right + pad;
+    if (by) bar.scrollBy ? bar.scrollBy({ left: by, behavior: instant ? "auto" : "smooth" }) : (bar.scrollLeft += by);
   }
 
   function buildSpecials() {

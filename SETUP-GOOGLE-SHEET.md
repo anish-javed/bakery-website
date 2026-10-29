@@ -64,7 +64,7 @@ Until you paste a link, the website shows a built-in **demo menu**, so you can l
 2. You should see a thank-you page with an order number like **CC-1001**.
 3. Open your sheet, then the **Orders** tab. Your order is there with Status **Received**.
 4. Check your email. You get a message for every order. It goes to the Google account that owns the sheet.
-5. Open **Track Order** on the website. Type the order number and the same phone number. You should see the progress line.
+5. Open **Track Order** on the website. Type the same phone number (the order number is optional). You should see your order, and the progress line moves by itself when you change the Status.
 
 ---
 
@@ -106,7 +106,7 @@ Delete its row. (Or set **Available** to `No` if you will sell it again.)
 2. Find **Online Discount %**.
 3. Change the number in the Value column. Type `0` to switch the discount off.
 
-The website changes the words everywhere ("Order online, save 5% on your total bill") and the checkout takes it off the bill. The discount is taken off the price of the items. It is not taken off the delivery fee.
+The website changes the words everywhere ("Order online, save 5% on your total bill") and the checkout takes it off the bill. The discount is taken off the TOTAL bill: the items plus the delivery fee.
 
 ### Change other settings
 Everything in the **Settings** tab can be changed: phone number, WhatsApp number, delivery fee, opening hours, delivery areas, time slots, bank and JazzCash details, and more. The third column explains each one.
@@ -134,7 +134,7 @@ If a product has no photo, or the link does not work, the website shows a pretty
 
 ### Look after orders
 1. Open the **Orders** tab. New orders appear at the bottom.
-2. Change the **Status** column with the drop-down: **Received**, **Baking**, **Out for delivery**, **Delivered** or **Cancelled**.
+2. Change the **Status** column with the drop-down: **Received**, **Baking**, **Out for delivery**, **Ready for pickup**, **Delivered**, **Collected** or **Cancelled**. (Use **Ready for pickup** and **Collected** for pickup orders.)
 3. Customers see the new status on the **Track Order** page.
 
 Please do **not** move or delete the columns in the Orders tab. If you do, the website may stop saving orders.
@@ -166,7 +166,7 @@ The link stays the same. You do **not** need to change `config.js`.
 - The website only sends the **names and quantities** of what a customer wants.
 - Your script looks up every price again in **your sheet**, adds the delivery fee, and works out the discount. It ignores any price sent from the browser, so nobody can change a price by editing the web page.
 - The order is checked for a real Pakistani phone number, a real date, a real time slot, sold-out items and pickup-only items.
-- The **Track Order** page only ever shows the status and the order date. It needs the order number **and** the phone number to match. After 5 wrong tries the order is locked for 15 minutes.
+- The **Track Order** page only ever shows the order number, the order date and the status (never names, addresses or items). It needs the phone number; the order number is optional. With only a phone number it lists that phone's orders from the last 30 days. After 5 wrong tries that phone number is locked for 15 minutes.
 - A hidden field and a speed check catch spam robots.
 
 ## If something goes wrong
@@ -180,3 +180,11 @@ The link stays the same. You do **not** need to change `config.js`.
 | A photo does not show | Make sure the link is open to **Anyone with the link**, then paste it again. |
 
 This is a demo website for a made-up bakery. Phone numbers and bank details in the sample data are not real.
+
+---
+
+## Sample photos and updating the script
+
+- Paste the newest **google-apps-script.gs** into Apps Script, then run **setup** once (it is safe: it keeps your data and adds the new Status choices) and run **addSamplePhotos** once. It fills the **Photo URL** column only where it is empty, so photos you added yourself are never changed.
+- After pasting new code, always go to **Deploy > Manage deployments > pencil icon > Version: New version > Deploy**. Until you do this, the website keeps using the old script.
+- Photos come from [Pexels](https://www.pexels.com).
