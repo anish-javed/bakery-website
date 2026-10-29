@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About &amp; Contact | Crumbs &amp; Co.</title>
+  <meta name="description" content="The story of Crumbs & Co., our opening hours, delivery areas and how to reach us.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%81%3C/text%3E%3C/svg%3E">
+</head>
+<body data-page="about">
+
+<main>
+  <div class="container page-head">
+    <span class="hand">Hello, we are Crumbs &amp; Co.</span>
+    <h1 style="font-size:clamp(2rem,5vw,3rem)">About &amp; contact</h1>
+  </div>
+
+  <section class="section" style="padding-top:10px">
+    <div class="container about-grid">
+      <div class="reveal">
+        <h2>A little bakery with a big sweet tooth</h2>
+        <p>Crumbs &amp; Co. started with one oven, one big bag of flour and a Lahore family that could not stop baking. Today we make cakes, hot patties, pizzas, soft bread and so much more, every single morning.</p>
+        <p>We use real butter, fresh milk and no shortcuts. Every birthday cake is baked to order, and every patty comes out of the oven warm.</p>
+        <p class="muted" style="font-size:.9rem">This is a demo website for a made-up bakery. Nothing here is a real business.</p>
+      </div>
+      <div class="reveal" id="about-art" style="border-radius:28px;overflow:hidden;box-shadow:var(--shadow)"></div>
+    </div>
+  </section>
+
+  <section class="band section">
+    <div class="container">
+      <div class="section-head reveal"><div><span class="hand">What we care about</span><h2>Baked with these promises</h2></div></div>
+      <div class="values">
+        <div class="value reveal"><div class="emoji">🧈</div><h3>Real ingredients</h3><p>Butter, fresh cream and real fruit. No fake flavours.</p></div>
+        <div class="value reveal"><div class="emoji">⏰</div><h3>Always fresh</h3><p>Breads and patties bake all day. Cakes are made to order.</p></div>
+        <div class="value reveal"><div class="emoji">🛵</div><h3>Careful delivery</h3><p>Cakes travel flat and safe, and arrive in the time slot you pick.</p></div>
+        <div class="value reveal"><div class="emoji">💛</div><h3>Made with love</h3><p>Tell us the occasion and we will add a little extra magic.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container about-grid" style="align-items:start">
+      <div class="panel reveal">
+        <h2>Visit and call</h2>
+        <p id="a-addr" class="muted"></p>
+        <h3>Opening hours</h3>
+        <ul class="hours" id="a-hours"></ul>
+        <p style="margin-top:16px">
+          <a class="btn btn-caramel" id="a-call" href="tel:03000000000">Call 0300 0000000</a>
+          <a class="btn btn-wa" id="a-wa" href="#" target="_blank" rel="noopener" style="margin-top:8px">Chat on WhatsApp</a>
+        </p>
+      </div>
+
+      <div class="panel reveal">
+        <h2>Send us a message</h2>
+        <form id="msg-form" novalidate>
+          <div class="field">
+            <label for="m-name">Your name</label>
+            <input id="m-name" type="text" maxlength="60" autocomplete="name">
+          </div>
+          <div class="field">
+            <label for="m-text">Your message</label>
+            <textarea id="m-text" maxlength="400" placeholder="Hi! I would like to ask about..."></textarea>
+            <div class="err">Please write a short message.</div>
+          </div>
+          <button class="btn btn-rose btn-block" type="submit">Send on WhatsApp</button>
+          <p class="muted" style="font-size:.84rem;margin:8px 0 0">This opens WhatsApp with your message ready to send.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section-head reveal"><div><span class="hand">Good to know</span><h2>Delivery and orders</h2></div></div>
+      <div class="values">
+        <div class="value reveal"><h3>Where we deliver</h3><p id="a-areas" class="muted">Loading…</p></div>
+        <div class="value reveal"><h3>Delivery fee</h3><p id="a-fee" class="muted">Loading…</p></div>
+        <div class="value reveal"><h3>Cake orders</h3><p id="a-notice" class="muted">Loading…</p></div>
+        <div class="value reveal"><h3>Online discount</h3><p id="a-disc" class="muted">Loading…</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/demo-data.js"></script>
+<script src="js/art.js"></script>
+<script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/about.js"></script>
+</body>
+</html>

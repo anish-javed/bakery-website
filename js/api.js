@@ -1,0 +1,143 @@
+/* Talks to the Google Apps Script web app: reads the menu, sends orders, tracks orders. */
+(function () {
+  var CC = (window.CC = window.CC || {});
+  var cfg = window.CC_CONFIG || {};
+  var CACHE_KEY = "cc_data_v1";
+  var PREFERRED = ["Cakes", "Pastries & Patties", "Pizzas & Sandwiches", "Snacks", "Breads & Rusks", "Milk & Dairy", "Juices & Drinks", "Ice Cream", "Cookies & Biscuits", "Birthday Decor"];
+
+  function fetchJson(url, opts, ms) {
+    return new Promise(function (resolve, reject) {
+      var ctrl = window.AbortController ? new AbortController() : null;
+      var timer = setTimeout(function () { if (ctrl) ctrl.abort(); reject(new Error("timeout")); }, ms || 15000);
+      opts = opts || {};
+      if (ctrl) opts.signal = ctrl.signal;
+      fetch(url, opts)
+        .then(function (r) { if (!r.ok) throw new Error("http " + r.status); return r.text(); })
+        .then(function (t) {
+          clearTimeout(timer);
+          var j;
+          try { j = JSON.parse(t); } catch (e) { return reject(new Error("bad json")); }
+          resolve(j);
+        })
+        .catch(function (e) { clearTimeout(timer); reject(e); });
+    });
+  }
+  function withQuery(q) { return cfg.SCRIPT_URL + (cfg.SCRIPT_URL.indexOf("?") > -1 ? "&" : "?") + q; }
+
+  /* ---------- settings ---------- */
+  function normSettings(raw) {
+    var m = {};
+    Object.keys(raw || {}).forEach(function (k) { m[k.toLowerCase().replace(/[^a-z0-9]/g, "")] = raw[k]; });
+    function s(k, d) { var v = m[k]; return v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim(); }
+    function n(k, d) { var v = parseFloat(String(m[k]).replace(/[^0-9.]/g, "")); return isNaN(v) ? d : v; }
+    function yes(v) { return ["yes", "y", "true", "1"].indexOf(String(v).toLowerCase()) > -1; }
+    function list(v, sep) { return String(v || "").split(sep).map(function (x) { return x.trim(); }).filter(Boolean); }
+    var wa = s("whatsappnumber", "923000000000").replace(/\D/g, "");
+    if (wa.charAt(0) === "0") wa = "92" + wa.slice(1);
+    return {
+      name: s("bakeryname", "Crumbs & Co."),
+      phone: s("phone", "0300 0000000"),
+      whatsapp: wa,
+      address: s("address", "Lahore, Pakistan"),
+      deliveryFee: n("deliveryfee", 250),
+      discountPct: n("onlinediscount", 5),
+      hours: list(s("openinghours", "Every day: 9 am - 11 pm"), ";"),
+      noticeDays: n("cakenoticedays", 2),
+      accepting: yes(s("acceptingorders", "Yes")),
+      cod: yes(s("cashondelivery", "Yes")),
+      areas: list(s("deliveryareas", ""), ","),
+      slots: list(s("timeslots", "10:00 am - 12:00 pm, 12:00 pm - 2:00 pm, 2:00 pm - 4:00 pm, 4:00 pm - 6:00 pm, 6:00 pm - 8:00 pm"), ","),
+      bank: s("bankname", ""), accountTitle: s("accounttitle", ""), accountNo: s("accountnumber", ""), iban: s("iban", ""),
+      jazz: s("jazzcashnumber", ""), jazzTitle: s("jazzcashtitle", ""),
+      payNote: s("paymentnote", "We confirm your payment before we start baking.")
+    };
+  }
+
+  /* ---------- build the data used by every page ---------- */
+  function build(raw, source) {
+    var products = (raw.products || []).map(function (p, i) {
+      return {
+        name: String(p.name), category: String(p.category || "Other"), price: Number(p.price) || 0, unit: String(p.unit || ""),
+        description: String(p.description || ""), photo: String(p.photo || ""), available: p.available !== false,
+        featured: !!p.featured, delivery: p.delivery !== false, popularity: Number(p.popularity) || 0, order: p.order != null ? p.order : i
+      };
+    });
+    var byName = {}, seen = {};
+    products.forEach(function (p) { byName[p.name.toLowerCase()] = p; seen[p.category] = (seen[p.category] || 0) + 1; });
+    var cats = PREFERRED.filter(function (c) { return seen[c]; });
+    Object.keys(seen).forEach(function (c) { if (cats.indexOf(c) === -1) cats.push(c); });
+    var o = raw.options || {};
+    CC.data = {
+      products: products, byName: byName, categories: cats, counts: seen,
+      options: { sizes: o.sizes || [], flavours: o.flavours || [], frostings: o.frostings || [] },
+      settings: normSettings(raw.settings), source: source, demo: source === "demo"
+    };
+    CC.cart.sync(CC.data);
+    return CC.data;
+  }
+
+  /* ---------- load (with a short browser cache) ---------- */
+  var loadPromise = null;
+  function readCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY)); } catch (e) { return null; } }
+  function writeCache(data) { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), data: data })); } catch (e) { /* ignore */ } }
+
+  function doLoad() {
+    if (!cfg.SCRIPT_URL) return Promise.resolve(build(window.CC_DEMO, "demo"));
+    var cached = readCache(), mins = cfg.CACHE_MINUTES || 5;
+    if (cached && cached.data && Date.now() - cached.t < mins * 60000) return Promise.resolve(build(cached.data, "cache"));
+    return fetchJson(withQuery("action=all"), {}, 15000)
+      .then(function (j) {
+        if (!j || !j.ok || !j.products) throw new Error("bad data");
+        writeCache(j);
+        return build(j, "live");
+      })
+      .catch(function (err) {
+        if (cached && cached.data) return build(cached.data, "stale");
+        throw err;
+      });
+  }
+  CC.load = function () { if (!loadPromise) loadPromise = doLoad(); return loadPromise; };
+  CC.reload = function () { loadPromise = null; try { localStorage.removeItem(CACHE_KEY); } catch (e) { /* ignore */ } return CC.load(); };
+
+  /* ---------- orders ---------- */
+  function demoOrder(p) {
+    var d = CC.data, items = [], subtotal = 0;
+    p.items.forEach(function (it) {
+      var price, label;
+      if (it.cake) { price = CC.cakePrice(it.cake, d.options); label = "Custom cake: " + it.cake.size + ", " + it.cake.flavour + ", " + it.cake.frosting + (it.cake.message ? ' — "' + it.cake.message + '"' : ""); }
+      else { var pr = d.byName[String(it.name).toLowerCase()]; price = pr ? pr.price : 0; label = it.name; }
+      items.push({ label: label, qty: it.qty, lineTotal: price * it.qty });
+      subtotal += price * it.qty;
+    });
+    var n = (CC.store.get("demoNo", 1000)) + 1;
+    CC.store.set("demoNo", n);
+    var fee = p.method === "Delivery" ? d.settings.deliveryFee : 0, disc = Math.round(subtotal * d.settings.discountPct / 100);
+    return { ok: true, demo: true, orderNo: "DEMO-" + n, subtotal: subtotal, deliveryFee: fee, discount: disc, total: subtotal + fee - disc, items: items };
+  }
+
+  CC.placeOrder = function (payload) {
+    if (!cfg.SCRIPT_URL) return new Promise(function (r) { setTimeout(function () { r(demoOrder(payload)); }, 700); });
+    return fetchJson(cfg.SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }, 30000);
+  };
+
+  CC.track = function (orderNo, phone) {
+    if (!cfg.SCRIPT_URL) {
+      return new Promise(function (resolve) {
+        setTimeout(function () {
+          var l = CC.store.last.get();
+          var same = l && String(l.no).toLowerCase() === String(orderNo).toLowerCase().trim() && String(l.phone || "").replace(/\D/g, "").slice(-10) === String(phone).replace(/\D/g, "").slice(-10);
+          if (same) {
+            var age = Date.now() - l.t, status = age < 60000 ? "Received" : age < 180000 ? "Baking" : age < 300000 ? "Out for delivery" : "Delivered";
+            resolve({ ok: true, status: status, orderTime: l.t, demo: true });
+          } else resolve({ ok: false, error: "We could not find an order with these details. Please check the order number and phone number." });
+        }, 600);
+      });
+    }
+    return fetchJson(withQuery("action=track&order=" + encodeURIComponent(orderNo) + "&phone=" + encodeURIComponent(phone)), {}, 20000);
+  };
+
+  CC.waLink = function (text) {
+    var n = CC.data ? CC.data.settings.whatsapp : "923000000000";
+    return "https://wa.me/" + n + (text ? "?text=" + encodeURIComponent(text) : "");
+  };
+})();

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menu | Crumbs &amp; Co.</title>
+  <meta name="description" content="Browse the Crumbs & Co. menu: cakes, pastries, pizzas, snacks, breads, dairy, drinks, ice cream, cookies and birthday decor.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%81%3C/text%3E%3C/svg%3E">
+</head>
+<body data-page="menu">
+
+<main>
+  <div class="container page-head">
+    <span class="hand">Everything we bake</span>
+    <h1 style="font-size:clamp(2rem,5vw,3rem)">Our menu</h1>
+    <div class="promo-card hidden" id="menu-promo" style="margin-top:10px"></div>
+  </div>
+
+  <div class="catbar-wrap" id="catbar-wrap" hidden>
+    <div class="catbar" id="catbar" role="tablist" aria-label="Categories"></div>
+  </div>
+
+  <div class="container">
+    <div id="menu-load"></div>
+
+    <div id="menu-app" hidden>
+      <div class="toolbar">
+        <div class="search">
+          <label for="q">Find your product</label>
+          <span aria-hidden="true" id="search-icon"></span>
+          <input id="q" type="search" placeholder="Try &quot;chocolate&quot;, &quot;samosa&quot; or &quot;candles&quot;" autocomplete="off">
+        </div>
+        <div class="filters">
+          <div class="f"><label for="pmin">From (Rs)</label><input id="pmin" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+          <div class="f"><label for="pmax">To (Rs)</label><input id="pmax" type="number" min="0" inputmode="numeric" placeholder="Any"></div>
+          <div class="f"><label for="sort">Sort by</label>
+            <select id="sort">
+              <option value="popular">Most popular</option>
+              <option value="low">Price: low to high</option>
+              <option value="high">Price: high to low</option>
+              <option value="new">New arrivals</option>
+            </select>
+          </div>
+          <label class="toggle" id="stock-toggle"><input type="checkbox" id="stock"> In stock only</label>
+          <button class="toggle" id="fav-toggle" type="button" aria-pressed="false">&#9829; Favourites <span id="fav-count">0</span></button>
+        </div>
+      </div>
+
+      <section id="specials" hidden style="padding:6px 0 10px">
+        <div class="section-head" style="margin-bottom:6px"><div><span class="hand">Fresh today</span><h2 style="font-size:1.6rem">Today's specials</h2></div></div>
+        <div class="hscroll" id="specials-row"></div>
+      </section>
+
+      <div class="result-bar"><span id="count" aria-live="polite"></span><button class="btn btn-ghost btn-sm hidden" id="clear" type="button">Clear filters</button></div>
+      <div class="grid" id="grid"></div>
+      <div id="empty" class="empty hidden"></div>
+      <div id="sentinel" style="height:1px"></div>
+      <div class="more-wrap hidden" id="more-wrap"><button class="btn btn-caramel" id="more" type="button">Show more</button></div>
+    </div>
+  </div>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/demo-data.js"></script>
+<script src="js/art.js"></script>
+<script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/menu.js"></script>
+</body>
+</html>

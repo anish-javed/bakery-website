@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crumbs &amp; Co. | Fresh bakes in Lahore</title>
+  <meta name="description" content="Crumbs & Co. is a demo bakery in Lahore. Cakes, patties, pizzas, breads, ice cream and more. Order online and save.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%81%3C/text%3E%3C/svg%3E">
+</head>
+<body data-page="home">
+
+<main>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <span class="hand">Fresh from our Lahore oven</span>
+        <h1>Warm bakes, <em>sweet</em> moments.</h1>
+        <p class="lead">Birthday cakes, hot patties, cheesy pizzas, soft bread and cold ice cream. Pick what you love, we bake it and bring it to your door.</p>
+        <div class="hero-cta">
+          <a class="btn btn-rose" href="menu.html">Order from the menu</a>
+          <a class="btn btn-ghost" href="build-cake.html">Build your cake</a>
+        </div>
+        <div class="hero-badges">
+          <span class="chip">Baked fresh every day</span>
+          <span class="chip">Delivery across Lahore</span>
+          <span class="chip">Cash on delivery</span>
+        </div>
+      </div>
+      <div class="hero-art" id="hero-art" aria-hidden="true">
+        <div class="blob b2"></div>
+        <div class="blob"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="promo-card hidden" id="promo-card"></div>
+    <div id="reorder-slot"></div>
+  </div>
+
+  <div id="home-body"></div>
+
+  <section class="section">
+    <div class="container">
+      <div class="band" style="border-radius:28px;padding:28px 20px">
+        <div class="about-grid reveal">
+          <div class="cake-stage" id="home-cake" aria-hidden="true"></div>
+          <div>
+            <span class="hand">Your cake, your way</span>
+            <h2>Design a cake just for them</h2>
+            <p>Choose the size, flavour and frosting, write a message, and watch your cake come to life. We need 2 days to bake something special, so plan ahead.</p>
+            <a class="btn btn-caramel" href="build-cake.html">Start building</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head reveal"><div><span class="hand">Easy as pie</span><h2>How ordering works</h2></div></div>
+      <div class="values">
+        <div class="value reveal"><div class="emoji">🛒</div><h3>1. Pick your treats</h3><p>Browse the menu, tap the heart on favourites and add what you like to your cart.</p></div>
+        <div class="value reveal"><div class="emoji">📝</div><h3>2. Tell us where and when</h3><p>Choose delivery or pickup, a date and a time slot. Pay by cash, bank transfer or JazzCash.</p></div>
+        <div class="value reveal"><div class="emoji">🧁</div><h3>3. We bake, you track</h3><p>Follow your order live on the Track Order page, from baking to your doorstep.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="panel reveal">
+        <div class="about-grid">
+          <div>
+            <span class="hand">Come say hello</span>
+            <h2>Visit our bakery</h2>
+            <p id="home-addr" class="muted"></p>
+            <ul class="hours" id="home-hours"></ul>
+          </div>
+          <div class="center">
+            <a class="btn btn-wa" id="home-wa" href="#" target="_blank" rel="noopener">Chat on WhatsApp</a>
+            <p class="muted" style="margin-top:12px">Or call <a id="home-phone" href="tel:03000000000">0300 0000000</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/demo-data.js"></script>
+<script src="js/art.js"></script>
+<script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/home.js"></script>
+</body>
+</html>

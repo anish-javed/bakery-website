@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Build Your Cake | Crumbs &amp; Co.</title>
+  <meta name="description" content="Design your own cake: pick the size, flavour and frosting, add a message and see it come to life.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%81%3C/text%3E%3C/svg%3E">
+</head>
+<body data-page="cake">
+
+<main>
+  <div class="container page-head">
+    <span class="hand">Made just for them</span>
+    <h1 style="font-size:clamp(2rem,5vw,3rem)">Build your cake</h1>
+    <p>Choose the size, flavour and frosting. The picture changes as you choose, and so does the price.</p>
+  </div>
+
+  <div class="container">
+    <div id="cake-load"></div>
+
+    <div class="cake-layout" id="cake-app" hidden>
+      <div class="cake-stage-wrap">
+        <div class="cake-stage">
+          <div id="cake-svg"></div>
+          <div class="live-price" id="live-price">Rs 0</div>
+          <small class="muted" id="live-detail"></small>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="step-h" style="margin-top:0"><i>1</i> Pick a size</div>
+        <div class="opts" id="o-size" role="radiogroup" aria-label="Size"></div>
+
+        <div class="step-h"><i>2</i> Pick a flavour</div>
+        <div class="opts" id="o-flavour" role="radiogroup" aria-label="Flavour"></div>
+
+        <div class="step-h"><i>3</i> Pick a frosting</div>
+        <div class="opts" id="o-frosting" role="radiogroup" aria-label="Frosting"></div>
+
+        <div class="step-h"><i>4</i> Message on the cake</div>
+        <div class="field">
+          <input id="msg" type="text" maxlength="30" placeholder="e.g. Happy Birthday Ayesha!" autocomplete="off">
+          <div class="hint"><span id="msg-left">30</span> letters left. Leave empty for no message.</div>
+        </div>
+
+        <div class="step-h"><i>5</i> When do you need it?</div>
+        <div class="field" id="date-field">
+          <input id="date" type="date">
+          <div class="hint" id="date-hint"></div>
+          <div class="err" id="date-err">Please pick a date.</div>
+        </div>
+
+        <div class="promo-card hidden" id="cake-promo" style="margin-bottom:14px"></div>
+
+        <button class="btn btn-rose btn-block" id="add-cake" type="button">Add this cake to my cart</button>
+        <p class="center muted" style="margin:10px 0 0"><a href="cart.html">Go to cart</a> · Your date is saved for checkout</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/demo-data.js"></script>
+<script src="js/art.js"></script>
+<script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/cake.js"></script>
+</body>
+</html>
