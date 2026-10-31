@@ -25,11 +25,13 @@ var STATUSES = ['Received', 'Baking', 'Out for delivery', 'Ready for pickup', 'D
 var PRODUCT_HEADERS = ['Name', 'Category', 'Price PKR', 'Unit', 'Description', 'Photo URL', 'Available', 'Featured', 'Delivery', 'Popularity'];
 var OPTION_HEADERS = ['Type', 'Name', 'Price PKR', 'Pounds', 'What the price means'];
 var SETTING_HEADERS = ['Setting', 'Value', 'What it does'];
-var ORDER_HEADERS = ['Order No', 'Status', 'Order Time (Pakistan)', 'Customer Name', 'Phone', 'Method', 'Area', 'Address', 'Needed On', 'Time Slot', 'Payment', 'Items', 'Subtotal PKR', 'Delivery Fee PKR', 'Discount PKR', 'Total PKR', 'Notes', 'Order Time (UTC ms)'];
+var ORDER_HEADERS = ['Order No', 'Status', 'Order Time (Pakistan)', 'Customer Name', 'Phone', 'Method', 'Area', 'Address', 'Needed On', 'Time Slot', 'Payment', 'Items', 'Subtotal PKR', 'Delivery Fee PKR', 'Discount PKR', 'Total PKR', 'Notes', 'Order Time (UTC ms)', 'Payment Status'];
 // Column positions in the Orders tab (0 = first column). Please do not move these columns.
-var OC = { NO: 0, STATUS: 1, TIME: 2, NAME: 3, PHONE: 4, METHOD: 5, AREA: 6, ADDRESS: 7, DATE: 8, SLOT: 9, PAYMENT: 10, ITEMS: 11, SUB: 12, FEE: 13, DISC: 14, TOTAL: 15, NOTES: 16, MS: 17 };
+var OC = { NO: 0, STATUS: 1, TIME: 2, NAME: 3, PHONE: 4, METHOD: 5, AREA: 6, ADDRESS: 7, DATE: 8, SLOT: 9, PAYMENT: 10, ITEMS: 11, SUB: 12, FEE: 13, DISC: 14, TOTAL: 15, NOTES: 16, MS: 17, PAYST: 18 };
 
 var BANK = 'Bank transfer / JazzCash';
+var CASH_PICKUP = 'Pay at pickup (cash)';
+var PAY_STATES = ['Pay on delivery', 'Pay at pickup', 'Waiting for payment', 'Paid'];
 
 var SETTING_ROWS = [
   ['Bakery Name', 'Crumbs & Co.', 'Shown on the website and in WhatsApp messages.'],
@@ -50,7 +52,7 @@ var SETTING_ROWS = [
   ['IBAN', 'PK00 DEMO 0000 0000 0000 0000', ''],
   ['JazzCash Number', '0300 0000000', ''],
   ['JazzCash Title', 'Crumbs and Co.', ''],
-  ['Payment Note', 'After you pay, send the screenshot on WhatsApp. We confirm your payment before we start baking.', 'Shown under the account details at checkout.']
+  ['Payment Note', 'After you pay, tap I've paid on the next screen. We confirm your payment before we start baking.', 'Shown under the account details at checkout.']
 ];
 
 var OPTION_ROWS = [
@@ -361,6 +363,47 @@ function addSamplePhotos() {
   try { SpreadsheetApp.getUi().alert(msg); } catch (e) { console.log(msg); }
 }
 
+/**
+ * Run this ONCE from the Apps Script editor on an Orders tab you already have.
+ * It adds the "Payment Status" column at the END (nothing else moves) with its dropdown,
+ * and fills old rows: "Pay on delivery" for Delivery orders, "Pay at pickup" for Pickup orders.
+ * Rows that already have a payment status are not changed.
+ */
+function addPaymentColumn() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(TAB.ORDERS);
+  var msg;
+  if (!sh) {
+    msg = 'There is no Orders tab yet. Please run setup first.';
+  } else {
+    var col = OC.PAYST + 1;
+    if (sh.getMaxColumns() < col) sh.insertColumnsAfter(sh.getMaxColumns(), col - sh.getMaxColumns());
+    sh.getRange(1, col).setValue(ORDER_HEADERS[OC.PAYST]).setFontWeight('bold').setFontColor('#fff6e9').setBackground('#4a2c1d').setVerticalAlignment('middle');
+    ensureRows_(sh, 5001);
+    sh.getRange(2, col, 5000, 1).setNumberFormat('@').setDataValidation(listRule_(PAY_STATES, false));
+    sh.setColumnWidth(col, 150);
+    var last = sh.getLastRow(), filled = 0;
+    if (last > 1) {
+      var methods = sh.getRange(2, OC.METHOD + 1, last - 1, 1).getValues();
+      var range = sh.getRange(2, col, last - 1, 1), cur = range.getValues();
+      for (var i = 0; i < cur.length; i++) {
+        if (String(cur[i][0]).trim() !== '') continue; // already has a payment status: leave it alone
+        if (String(methods[i][0]).trim() === '') continue; // empty row
+        cur[i][0] = String(methods[i][0]).trim() === 'Pickup' ? 'Pay at pickup' : 'Pay on delivery';
+        filled++;
+      }
+      range.setValues(cur);
+    }
+    var prng = sh.getRange('S2:S5001');
+    var rules = sh.getConditionalFormatRules();
+    rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo('Waiting for payment').setBackground('#fff0cf').setRanges([prng]).build());
+    rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo('Paid').setBackground('#d9f0dc').setRanges([prng]).build());
+    sh.setConditionalFormatRules(rules);
+    msg = 'Done! The Payment Status column is ready. ' + filled + ' old order' + (filled === 1 ? '' : 's') + ' updated.';
+  }
+  try { SpreadsheetApp.getUi().alert(msg); } catch (e) { console.log(msg); }
+}
+
 function getOrCreate_(ss, name) { return ss.getSheetByName(name) || ss.insertSheet(name); }
 
 function ensureRows_(sh, rows) {
@@ -437,12 +480,16 @@ function setupOrders_(ss) {
   textCols.forEach(function (c) { sh.getRange(2, c + 1, 5000, 1).setNumberFormat('@'); });
   [OC.SUB, OC.FEE, OC.DISC, OC.TOTAL].forEach(function (c) { sh.getRange(2, c + 1, 5000, 1).setNumberFormat('#,##0'); });
   sh.getRange(2, OC.MS + 1, 5000, 1).setNumberFormat('0');
+  sh.getRange(2, OC.PAYST + 1, 5000, 1).setNumberFormat('@').setDataValidation(listRule_(PAY_STATES, false)); // the Payment Status dropdown
   sh.getRange(2, OC.STATUS + 1, 5000, 1).setDataValidation(listRule_(STATUSES, false)); // the Status dropdown
-  var widths = [90, 130, 160, 150, 120, 80, 120, 240, 100, 170, 160, 360, 100, 100, 100, 100, 220, 140];
+  var widths = [90, 130, 160, 150, 120, 80, 120, 240, 100, 170, 160, 360, 100, 100, 100, 100, 220, 140, 150];
   widths.forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
   var rng = sh.getRange('B2:B5001');
   function rule(text, bg) { return SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(text).setBackground(bg).setRanges([rng]).build(); }
-  sh.setConditionalFormatRules([rule('Received', '#fff0cf'), rule('Baking', '#fde3c4'), rule('Out for delivery', '#dbeafe'), rule('Ready for pickup', '#dbeafe'), rule('Delivered', '#d9f0dc'), rule('Collected', '#d9f0dc'), rule('Cancelled', '#f9d6d0')]);
+  var prng = sh.getRange('S2:S5001');
+  function prule(text, bg) { return SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(text).setBackground(bg).setRanges([prng]).build(); }
+  sh.setConditionalFormatRules([rule('Received', '#fff0cf'), rule('Baking', '#fde3c4'), rule('Out for delivery', '#dbeafe'), rule('Ready for pickup', '#dbeafe'), rule('Delivered', '#d9f0dc'), rule('Collected', '#d9f0dc'), rule('Cancelled', '#f9d6d0'),
+    prule('Waiting for payment', '#fff0cf'), prule('Paid', '#d9f0dc')]);
   sh.getRange(1, OC.MS + 1).setNote('Time the order arrived, in UTC milliseconds. This is the true time (it never changes with time zones). The Pakistan time next to it is for reading.');
 }
 
@@ -457,6 +504,13 @@ function digits_(v) { return String(v == null ? '' : v).replace(/\D/g, ''); }
 function json_(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function safeText_(v, max) {
   return String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^[=+\-@]+/, '').slice(0, max);
+}
+// What the customer sees for payment. Uses the Payment Status column; if it is empty (old rows) we work it out.
+function payState_(status, method, payment) {
+  var s = String(status == null ? '' : status).trim().toLowerCase();
+  for (var i = 0; i < PAY_STATES.length; i++) if (PAY_STATES[i].toLowerCase() === s) return PAY_STATES[i];
+  if (String(payment).trim() === BANK) return 'Waiting for payment';
+  return String(method).trim() === 'Pickup' ? 'Pay at pickup' : 'Pay on delivery';
 }
 function money_(n) { return 'Rs ' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function todayPK_() { return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'); }
@@ -593,7 +647,8 @@ function getAllCached_() {
  * Track an order. The visitor must give the PHONE number. The order number is optional.
  *   phone only      -> that phone's orders from the last 30 days (newest first): order number, date and status ONLY.
  *   phone + order   -> that one order: status, date and Delivery/Pickup (so the right steps are shown).
- * Names, addresses and items are NEVER returned. Wrong tries are limited per phone number.
+ * The one order also returns its payment state only (Waiting for payment, Paid, Pay on delivery, Pay at pickup).
+ * Names, addresses, items, amounts and account details are NEVER returned. Wrong tries are limited per phone number.
  */
 function trackOrder_(orderNo, phone) {
   var cache = CacheService.getScriptCache();
@@ -612,7 +667,7 @@ function trackOrder_(orderNo, phone) {
   var found = null, list = [];
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB.ORDERS);
   if (sh && sh.getLastRow() > 1) {
-    var vals = sh.getRange(2, 1, sh.getLastRow() - 1, ORDER_HEADERS.length).getValues();
+    var vals = sh.getRange(2, 1, sh.getLastRow() - 1, Math.min(ORDER_HEADERS.length, sh.getLastColumn())).getValues();
     var cutoff = Date.now() - 30 * 24 * 3600 * 1000;
     for (var i = vals.length - 1; i >= 0; i--) { // newest rows are at the bottom
       var r = vals[i];
@@ -620,7 +675,7 @@ function trackOrder_(orderNo, phone) {
       var st = String(r[OC.STATUS]).trim(), ms = Number(r[OC.MS]) || null;
       var order = { no: String(r[OC.NO]).trim(), status: STATUSES.indexOf(st) > -1 ? st : 'Received', orderTime: ms };
       if (no) {
-        if (order.no.toUpperCase() === no) { order.method = r[OC.METHOD] === 'Pickup' ? 'Pickup' : 'Delivery'; found = order; break; }
+        if (order.no.toUpperCase() === no) { order.method = r[OC.METHOD] === 'Pickup' ? 'Pickup' : 'Delivery'; order.payment = payState_(r[OC.PAYST], r[OC.METHOD], r[OC.PAYMENT]); found = order; break; }
       } else if (ms && ms >= cutoff && list.length < 30) {
         list.push(order);
       }
@@ -629,7 +684,7 @@ function trackOrder_(orderNo, phone) {
 
   if (no ? found : list.length) {
     try { cache.remove(key); } catch (e) { /* ignore */ }
-    if (no) return { ok: true, mode: 'one', orderNo: found.no, status: found.status, orderTime: found.orderTime, method: found.method };
+    if (no) return { ok: true, mode: 'one', orderNo: found.no, status: found.status, orderTime: found.orderTime, method: found.method, payment: found.payment };
     return { ok: true, mode: 'list', orders: list };
   }
   try { cache.put(key, String(fails + 1), 900); cache.put(all, String(allFails + 1), 600); } catch (e) { /* ignore */ }
@@ -687,7 +742,9 @@ function placeOrder_(d) {
   }
 
   var payment = String(d.payment || '');
-  if (payment !== BANK && !(payment === 'Cash on Delivery' && set.cod)) return fail_('Please choose how you will pay.');
+  var cashLabel = method === 'Pickup' ? CASH_PICKUP : 'Cash on Delivery';
+  if (payment !== BANK && !(payment === cashLabel && set.cod)) return fail_('Please choose how you will pay.');
+  var payStatus = payment === BANK ? 'Waiting for payment' : method === 'Pickup' ? 'Pay at pickup' : 'Pay on delivery';
 
   // The time slot is optional. When none is chosen we save "Any time".
   var slot = safeText_(d.slot, 40);
@@ -746,11 +803,12 @@ function placeOrder_(d) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sh = ss.getSheetByName(TAB.ORDERS) || (setupOrders_(ss), ss.getSheetByName(TAB.ORDERS));
+    if (sh.getMaxColumns() < ORDER_HEADERS.length) sh.insertColumnsAfter(sh.getMaxColumns(), ORDER_HEADERS.length - sh.getMaxColumns()); // safety in case addPaymentColumn was not run yet
     var last = sh.getLastRow(), maxNo = 1000;
     if (last > 1) sh.getRange(2, 1, last - 1, 1).getValues().forEach(function (r) { var m = /^CC-(\d+)$/i.exec(String(r[0]).trim()); if (m) maxNo = Math.max(maxNo, Number(m[1])); });
     orderNo = 'CC-' + (maxNo + 1);
     var itemsText = lines.map(function (l) { return l.qty + ' x ' + l.label + ' = ' + money_(l.lineTotal); }).join('\n');
-    var row = [orderNo, 'Received', Utilities.formatDate(new Date(nowMs), TZ, 'dd MMM yyyy, hh:mm a'), name, phone, method, area, address, date, slot, payment, itemsText, subtotal, fee, discount, total, notes, nowMs];
+    var row = [orderNo, 'Received', Utilities.formatDate(new Date(nowMs), TZ, 'dd MMM yyyy, hh:mm a'), name, phone, method, area, address, date, slot, payment, itemsText, subtotal, fee, discount, total, notes, nowMs, payStatus];
     var rng = sh.getRange(last + 1, 1, 1, ORDER_HEADERS.length);
     var fmts = row.map(function (v, c) { return (c >= OC.SUB && c <= OC.TOTAL) ? '#,##0' : c === OC.MS ? '0' : '@'; });
     rng.setNumberFormats([fmts]);
@@ -773,15 +831,17 @@ function placeOrder_(d) {
       MailApp.sendEmail({
         to: to,
         name: set.name + ' website',
-        subject: 'New order ' + orderNo + ' - ' + money_(total) + ' (' + method + ')',
-        body: 'New website order ' + orderNo + '\n\n' +
+        subject: 'New ' + method.toUpperCase() + ' order ' + orderNo + ' - ' + money_(total) + (payment === BANK ? ' - WAITING FOR PAYMENT' : ''),
+        body: 'New website order ' + orderNo + ' - this is a ' + method.toUpperCase() + ' order.\n\n' +
           'Name: ' + name + '\nPhone: ' + phone + '\nMethod: ' + method + '\n' +
           (method === 'Delivery' ? 'Area: ' + area + '\nAddress: ' + address + '\n' : '') +
           'Needed on: ' + date + ', ' + slot + '\nPayment: ' + payment + '\n\n' +
           lines.map(function (l) { return l.qty + ' x ' + l.label + ' = ' + money_(l.lineTotal); }).join('\n') + '\n\n' +
           'Subtotal: ' + money_(subtotal) + '\nDelivery fee: ' + money_(fee) + '\nOnline discount (' + set.discountPct + '% of items + delivery): -' + money_(discount) + '\nTOTAL: ' + money_(total) + '\n\n' +
           (notes ? 'Notes: ' + notes + '\n\n' : '') +
-          (payment === BANK ? 'This customer will pay by bank transfer / JazzCash. Please confirm the payment before baking.\n\n' : '') +
+          (payment === BANK
+            ? 'Check your JazzCash/Easypaisa/bank app for ' + money_(total) + ' from ' + name + ' / ' + phone + ', then set Payment Status to Paid in the Orders tab.\nStart baking only after Paid, and never ' + (method === 'Pickup' ? 'hand over' : 'send out') + ' this order while it is still Waiting for payment.\n\n'
+            : 'Collect ' + money_(total) + (method === 'Pickup' ? ' at pickup' : ' on delivery') + '.\n\n') +
           'Open the Orders tab to change the status: ' + SpreadsheetApp.getActiveSpreadsheet().getUrl()
       });
     }

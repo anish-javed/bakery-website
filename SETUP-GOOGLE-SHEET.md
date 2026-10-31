@@ -141,8 +141,32 @@ Please do **not** move or delete the columns in the Orders tab. If you do, the w
 
 The order time is saved in two ways. **Order Time (Pakistan)** is easy to read. **Order Time (UTC ms)** is a number that is always correct, whatever time zone anyone is in.
 
-### Bank transfer and JazzCash orders
-These customers pay first. The email and the Orders tab say so. Check your bank or JazzCash app, and start baking after the money arrives.
+### Payments: confirm and mark Paid
+The last column of the **Orders** tab is **Payment Status**. It is filled in by itself:
+
+| Payment Status | When |
+|---|---|
+| **Pay on delivery** | Delivery order, paying cash |
+| **Pay at pickup** | Pickup order, paying cash |
+| **Waiting for payment** | Bank transfer / JazzCash (Delivery or Pickup) |
+| **Paid** | You set this yourself, after you see the money |
+
+How to confirm a payment:
+1. The email says "Check your JazzCash/Easypaisa/bank app for Rs ... from (name / phone)". The customer is **not** asked for a screenshot or a transaction number. The customer only taps **I've paid**, which sends you a WhatsApp message.
+2. Open your own JazzCash, Easypaisa or bank app. Look for the money: the right amount, from that name or phone, ideally with the order number as the reason.
+3. When you see it, open the **Orders** tab and change **Payment Status** to **Paid** with the drop-down.
+4. The customer sees **Payment received ✓** on the Track Order page by itself (within about 30 seconds).
+
+**The rule:** start baking prepaid orders only after **Paid**. Never hand over or send out a prepaid order that is still **Waiting for payment**. (This is true for Delivery and for Pickup.)
+
+For cash orders, collect the money when the order arrives or is picked up. You can change the Payment Status to **Paid** after that if you like.
+
+### Updating an older sheet (one time)
+If you already had the Orders tab before this payment feature:
+1. Paste the new `google-apps-script.gs` into Apps Script and save.
+2. Choose the function **addPaymentColumn** and click **Run**. It adds the Payment Status column at the end and fills old orders (nothing else is changed).
+3. **Deploy > Manage deployments**, click the pencil, choose **New version**, and click **Deploy**.
+4. Your **Payment Note** in the Settings tab may still say "send the screenshot". Change it to: `After you pay, tap I've paid on the next screen. We confirm your payment before we start baking.`
 
 ---
 
@@ -166,7 +190,7 @@ The link stays the same. You do **not** need to change `config.js`.
 - The website only sends the **names and quantities** of what a customer wants.
 - Your script looks up every price again in **your sheet**, adds the delivery fee, and works out the discount. It ignores any price sent from the browser, so nobody can change a price by editing the web page.
 - The order is checked for a real Pakistani phone number, a real date, a real time slot, sold-out items and pickup-only items.
-- The **Track Order** page only ever shows the order number, the order date and the status (never names, addresses or items). It needs the phone number; the order number is optional. With only a phone number it lists that phone's orders from the last 30 days. After 5 wrong tries that phone number is locked for 15 minutes.
+- The **Track Order** page only ever shows the order number, the order date, the status and the payment state (never names, addresses, items, amounts or account details). It needs the phone number; the order number is optional. With only a phone number it lists that phone's orders from the last 30 days. After 5 wrong tries that phone number is locked for 15 minutes.
 - A hidden field and a speed check catch spam robots.
 
 ## If something goes wrong

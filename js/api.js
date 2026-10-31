@@ -122,7 +122,7 @@
 
   // The phone number is required. The order number is optional:
   //   phone only    -> { ok, mode: "list", orders: [{ no, status, orderTime }] }  (last 30 days, newest first)
-  //   phone + order -> { ok, mode: "one", orderNo, status, orderTime, method }
+  //   phone + order -> { ok, mode: "one", orderNo, status, orderTime, method, payment }  (payment = state only, never amounts)
   // Tracking answers are never taken from the browser cache.
   CC.track = function (orderNo, phone) {
     orderNo = String(orderNo || "").trim();
@@ -135,7 +135,7 @@
           var status = age < 60000 ? "Received" : age < 180000 ? "Baking" : age < 300000 ? (pickup ? "Ready for pickup" : "Out for delivery") : (pickup ? "Collected" : "Delivered");
           if (orderNo) {
             if (String(l.no).toLowerCase() !== orderNo.toLowerCase()) return resolve({ ok: false, error: "We could not find an order with these details. Please check the order number and phone number." });
-            return resolve({ ok: true, mode: "one", orderNo: l.no, status: status, orderTime: l.t, method: pickup ? "Pickup" : "Delivery", demo: true });
+            return resolve({ ok: true, mode: "one", orderNo: l.no, status: status, orderTime: l.t, method: pickup ? "Pickup" : "Delivery", payment: l.payment === "Bank transfer / JazzCash" ? (age < 120000 ? "Waiting for payment" : "Paid") : pickup ? "Pay at pickup" : "Pay on delivery", demo: true });
           }
           if (age > 30 * 86400000) return resolve({ ok: false, error: "We could not find any orders for this phone number in the last 30 days. Please check the number, or type your order number too." });
           resolve({ ok: true, mode: "list", orders: [{ no: l.no, status: status, orderTime: l.t }], demo: true });

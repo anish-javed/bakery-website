@@ -74,7 +74,7 @@
     var my = ++seq;
     clearTimeout(timer);
     if (!silent) { var btn = $("go"); btn.disabled = true; btn.textContent = "Looking…"; say(""); }
-    CC.track(no, phone).then(function (res) {
+    CC.load().catch(function () { /* the status can still be shown without the settings */ }).then(function () { return CC.track(no, phone); }).then(function (res) {
       if (my !== seq) return; // a newer check has started
       ready();
       if (res && res.ok) {
@@ -142,6 +142,7 @@
         '<div class="progress" id="prog" style="--p:0"><div class="fill"></div>' +
         steps.map(function (x) { return '<div class="pstep"><div class="dot"></div>' + esc(x[0]) + "</div>"; }).join("") + "</div>" +
         '<p class="center" id="t-text" style="font-weight:700;margin:18px 0 8px"></p>' +
+        '<div class="payline" id="t-pay"></div>' +
         '<p class="center muted" style="font-size:.88rem;margin:0">' + (fromList ? '<button class="linkbtn" type="button" data-t="back">&larr; All my orders</button><br>' : "") + UPDATES + "</p></div>";
       r.hidden = false;
     }
@@ -162,8 +163,31 @@
     else prog.style.setProperty("--p", p); // the line slides to the new step
     if (changed) CC.toast(cancelled ? "Your order was cancelled" : "Your order is now: " + st);
 
-    shown = { key: key, status: st };
-    return !FINAL[st];
+    var pay = showPay(res, method, orderNo, cancelled, fresh);
+    shown = { key: key, status: st, pay: pay };
+    return !FINAL[st] || (pay === "Waiting for payment" && !cancelled);
+  }
+
+  // Small payment line under the progress line. Only the payment STATE comes from the bakery.
+  // The amount (for the "I've paid" message) is only known on the device that placed the order.
+  var PAY_TEXT = { "Pay on delivery": "Pay on delivery", "Pay at pickup": "Pay at pickup", "Paid": "Payment received ✓", "Waiting for payment": "Waiting for payment" };
+  function showPay(res, method, orderNo, cancelled, fresh) {
+    var box = $("t-pay"), pay = PAY_TEXT[res.payment] ? res.payment : "", prev = fresh ? null : shown.pay;
+    if (!pay || (cancelled && pay !== "Paid")) { box.innerHTML = ""; box.className = "payline"; return ""; }
+    if (prev === pay && box.innerHTML) return pay; // nothing changed: keep the panel (and anything being copied)
+    var html = '<div class="payst ' + (pay === "Paid" ? "ok" : pay === "Waiting for payment" ? "wait" : "cash") + '">' + esc(PAY_TEXT[pay]) + "</div>";
+    if (pay === "Waiting for payment" && CC.data && CC.data.settings) {
+      var l = CC.store.last.get(), mine = l && String(l.no).toLowerCase() === String(orderNo).toLowerCase();
+      html += CC.payPanel({ orderNo: orderNo, method: method, phone: (current && current.phone) || "", total: mine ? l.total : 0 });
+    }
+    box.innerHTML = html;
+    box.className = "payline";
+    if (prev && pay === "Paid") { // changed to Paid while the page is open: celebrate
+      box.classList.add("got-paid");
+      setTimeout(function () { box.classList.remove("got-paid"); }, 1400);
+      CC.toast("Payment received. Thank you!");
+    }
+    return pay;
   }
 
   // The browser remembers an order / phone: show the status straight away, without pressing the button.

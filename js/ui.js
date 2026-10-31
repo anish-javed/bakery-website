@@ -279,6 +279,25 @@
   });
   window.addEventListener("cc:favs", updateBadges);
 
+  /* ---------- paying by bank transfer / JazzCash (thank-you screen and Track Order) ---------- */
+  // o = { orderNo, method: "Delivery"|"Pickup", phone, total (optional) }. The total is only known on the device that placed the order.
+  CC.payPanel = function (o) {
+    var s = CC.data.settings, rows = "";
+    function row(k, v, copy) { return v ? "<dt>" + k + "</dt><dd>" + esc(v) + ' <button class="copy" type="button" data-copy="' + esc(copy || v) + '">Copy</button></dd>' : ""; }
+    if (o.total) rows += row("Amount to send", CC.fmt(o.total), String(Math.round(o.total)));
+    rows += row("Order number", o.orderNo) + row("Bank", s.bank) + row("Account title", s.accountTitle) + row("Account no.", s.accountNo) + row("IBAN", s.iban) + row("JazzCash", s.jazz) + row("JazzCash name", s.jazzTitle);
+    var msg = "Hi, I paid " + (o.total ? CC.fmt(o.total) + " " : "") + "for order " + o.orderNo + " (" + o.method + "). My phone: " + o.phone + ".";
+    return '<div class="paybox paypanel"><dl>' + rows + "</dl><div>If your app has a reason or note field, write your order number.</div>" +
+      '<div style="margin-top:12px"><a class="btn btn-wa" target="_blank" rel="noopener" href="' + esc(CC.waLink(msg)) + '">I\'ve paid</a></div></div>';
+  };
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-copy]");
+    if (!b) return;
+    var t = b.getAttribute("data-copy");
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { CC.toast("Copied"); }, function () { CC.toast(t); });
+    else CC.toast(t);
+  });
+
   /* ---------- start ---------- */
   shell();
   updateBadges();

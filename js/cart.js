@@ -4,7 +4,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var d, s, formStart = Date.now(), done = false, busy = false;
-  var BANK = "Bank transfer / JazzCash";
+  var BANK = "Bank transfer / JazzCash", CASH_PICKUP = "Pay at pickup (cash)";
 
   CC.boot($("cart-load"), function (data) {
     d = data; s = d.settings;
@@ -23,19 +23,24 @@
     var areas = s.areas.slice();
     $("area").innerHTML = '<option value="">Choose your area</option>' + areas.map(function (a) { return "<option>" + esc(a) + "</option>"; }).join("") + "<option>Other (write it in the address)</option>";
 
-    var pay = "";
-    if (s.cod) pay += '<label class="choice stack"><input type="radio" name="payment" value="Cash on Delivery" checked><span>Cash on Delivery <small class="muted">(or pay when you pick up)</small></span></label>';
-    pay += '<label class="choice stack"><input type="radio" name="payment" value="' + BANK + '"' + (s.cod ? "" : " checked") + "><span>" + BANK + "</span></label>";
-    $("pay-choices").innerHTML = pay;
-
     $("pickup-fields").innerHTML = "<div><b>Pick up from:</b> " + esc(s.address) + "<br>" + s.hours.map(esc).join("<br>") + "</div>";
     var saved = CC.store.get("customer", null);
     if (saved) { $("name").value = saved.name || ""; $("phone").value = saved.phone || ""; }
     syncMethod(); syncPay(); setupDate();
   }
 
+  // Cash choice has a different name for Delivery and Pickup. The choice (cash or bank) is kept when switching.
+  function cashLabel(m) { return m === "Pickup" ? CASH_PICKUP : "Cash on Delivery"; }
+  function buildPayChoices() {
+    var cur = payment(), bank = cur === BANK || (!cur && !s.cod), pay = "";
+    if (s.cod) pay += '<label class="choice stack"><input type="radio" name="payment" value="' + cashLabel(method()) + '"' + (bank ? "" : " checked") + "><span>" + cashLabel(method()) + "</span></label>";
+    pay += '<label class="choice stack"><input type="radio" name="payment" value="' + BANK + '"' + (bank ? " checked" : "") + "><span>" + BANK + "</span></label>";
+    $("pay-choices").innerHTML = pay;
+  }
+
   function syncMethod() {
     var del = method() === "Delivery";
+    buildPayChoices();
     $("delivery-fields").hidden = !del;
     $("pickup-fields").hidden = del;
     $("date-label").textContent = del ? "Delivery date" : "Pickup date";
@@ -181,12 +186,6 @@
       else if (act === "remove-pickup") { blockers().pickupOnly.forEach(function (l) { CC.cart.remove(l.key); }); }
       else if (act === "remove-sold") { blockers().soldOut.forEach(function (l) { CC.cart.remove(l.key); }); }
     });
-    $("paybox").addEventListener("click", function (e) {
-      var b = e.target.closest("[data-copy]"); if (!b) return;
-      var t = b.getAttribute("data-copy");
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { CC.toast("Copied"); }, function () { CC.toast(t); });
-      else CC.toast(t);
-    });
     $("checkout").addEventListener("submit", submit);
   }
 
@@ -251,7 +250,7 @@
   /* ---------- thank-you ---------- */
   function success(res, payload) {
     var ls = lines();
-    CC.store.last.set({ no: res.orderNo, t: Date.now(), phone: payload.phone, method: payload.method, total: res.total, items: ls.map(function (l) { return l.kind === "cake" ? { cake: l.cake, qty: l.qty } : { name: l.name, qty: l.qty }; }) });
+    CC.store.last.set({ no: res.orderNo, t: Date.now(), phone: payload.phone, method: payload.method, payment: payload.payment, total: res.total, items: ls.map(function (l) { return l.kind === "cake" ? { cake: l.cake, qty: l.qty } : { name: l.name, qty: l.qty }; }) });
     CC.store.set("customer", { name: payload.name, phone: payload.phone });
     done = true;
     CC.cart.clear();
@@ -273,7 +272,9 @@
       '<div class="sumrow total"><span>Total</span><span>' + CC.fmt(res.total) + "</span></div>";
 
     var note = res.total !== payload.expectedTotal ? '<div class="alert warn">Some prices changed since you added your items. This is your final total.</div>' : "";
-    var payNote = payload.payment === BANK ? '<div class="alert info" style="text-align:left">Please send <b>' + CC.fmt(res.total) + "</b> to the account shown at checkout (" + esc([s.bank, s.accountNo, s.jazz].filter(Boolean).join(" · ")) + "). Then send the screenshot on WhatsApp. <b>The bakery confirms your payment</b> before baking.</div>" : "";
+    var payNote = payload.payment === BANK
+      ? '<div style="text-align:left"><h3 style="margin:0 0 8px">How to pay</h3>' + CC.payPanel({ orderNo: res.orderNo, method: payload.method, phone: payload.phone, total: res.total }) + "</div>"
+      : '<div class="alert ok" style="text-align:left">' + (payload.method === "Pickup" ? "You will pay when you pick it up." : "You will pay when it arrives.") + "</div>";
     var demo = res.demo ? '<div class="alert info">This was a demo order. It was not saved anywhere.</div>' : "";
 
     $("cart-main").hidden = true; $("empty-cart").hidden = true; $("cart-head").hidden = true;
