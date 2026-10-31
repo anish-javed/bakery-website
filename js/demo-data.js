@@ -164,7 +164,11 @@ Gift Box with Ribbon|Birthday Decor|250|per piece|A pretty box and ribbon for yo
       "IBAN": "PK00 DEMO 0000 0000 0000 0000",
       "JazzCash Number": "0300 0000000",
       "JazzCash Title": "Crumbs and Co.",
-      "Payment Note": "After you pay, tap I've paid on the next screen. We confirm your payment before we start baking."
+      "Payment Note": "After you pay, tap I've paid on the next screen. We confirm your payment before we start baking.",
+      "ASAP Start Time": "09:00",
+      "ASAP Last Order Time": "22:15",
+      "ASAP Delivery Minutes": "45-60",
+      "ASAP Pickup Minutes": "20-30"
     }
   };
 })();

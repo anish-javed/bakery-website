@@ -168,6 +168,23 @@ If you already had the Orders tab before this payment feature:
 3. **Deploy > Manage deployments**, click the pencil, choose **New version**, and click **Deploy**.
 4. Your **Payment Note** in the Settings tab may still say "send the screenshot". Change it to: `After you pay, tap I have paid on the next screen. We confirm your payment before we start baking.`
 
+### "As soon as possible" orders
+At checkout customers choose **As soon as possible** or **Schedule for later**. ASAP is only for today, only between two times, and never for custom cakes. These rows in the **Settings** tab control it (all in Pakistan time):
+
+| Setting | Example | What it does |
+|---|---|---|
+| **ASAP Start Time** | 09:00 | ASAP opens at this time (24-hour clock) |
+| **ASAP Last Order Time** | 22:15 | The last time someone can place an ASAP order |
+| **ASAP Delivery Minutes** | 45-60 | Shown to the customer. The bigger number is used for "Expected By" |
+| **ASAP Pickup Minutes** | 20-30 | Same, for pickup |
+
+For an ASAP order the Orders tab shows **Needed On** = today, **Time Slot** = ASAP, and **Expected By** (the last column) = order time + the bigger number, like 10:50 pm. Scheduled orders leave **Expected By** empty. The owner email starts with **⚡ ASAP** and says "Expected by ...".
+
+If you already had a sheet before this feature:
+1. Paste the new `google-apps-script.gs` into Apps Script and save.
+2. Choose the function **addAsapSettings** and click **Run**. It adds the four Settings rows and the Expected By column (nothing else is changed).
+3. **Deploy > Manage deployments**, click the pencil, choose **New version**, and click **Deploy**.
+
 ---
 
 ## IMPORTANT: after you change the script

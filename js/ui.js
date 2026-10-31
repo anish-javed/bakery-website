@@ -8,7 +8,8 @@
   CC.fmt = function (n) { return "Rs " + Math.round(n || 0).toLocaleString("en-US"); };
   CC.todayPK = function () { return new Date(Date.now() + 5 * 3600e3).toISOString().slice(0, 10); }; // Pakistan is UTC+5, no daylight saving
   CC.nowPKMinutes = function () { var d = new Date(Date.now() + 5 * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
-  CC.addDays = function (ymd, n) { var d = new Date(ymd + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  CC.fmtClock = function (min) { min = ((Math.round(min) % 1440) + 1440) % 1440; var h = Math.floor(min / 60), m = min % 60; return (h % 12 || 12) + ":" + (m < 10 ? "0" : "") + m + (h >= 12 ? " pm" : " am"); }; // minutes since midnight -> "10:50 pm"
+  CC.addDays =function (ymd, n) { var d = new Date(ymd + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   CC.fmtDate = function (ymd) { return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(ymd + "T00:00:00Z")); };
   CC.fmtDateTime = function (ms) {
     return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(ms)) + " (Pakistan time)";

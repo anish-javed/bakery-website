@@ -25,13 +25,21 @@ var STATUSES = ['Received', 'Baking', 'Out for delivery', 'Ready for pickup', 'D
 var PRODUCT_HEADERS = ['Name', 'Category', 'Price PKR', 'Unit', 'Description', 'Photo URL', 'Available', 'Featured', 'Delivery', 'Popularity'];
 var OPTION_HEADERS = ['Type', 'Name', 'Price PKR', 'Pounds', 'What the price means'];
 var SETTING_HEADERS = ['Setting', 'Value', 'What it does'];
-var ORDER_HEADERS = ['Order No', 'Status', 'Order Time (Pakistan)', 'Customer Name', 'Phone', 'Method', 'Area', 'Address', 'Needed On', 'Time Slot', 'Payment', 'Items', 'Subtotal PKR', 'Delivery Fee PKR', 'Discount PKR', 'Total PKR', 'Notes', 'Order Time (UTC ms)', 'Payment Status'];
+var ORDER_HEADERS = ['Order No', 'Status', 'Order Time (Pakistan)', 'Customer Name', 'Phone', 'Method', 'Area', 'Address', 'Needed On', 'Time Slot', 'Payment', 'Items', 'Subtotal PKR', 'Delivery Fee PKR', 'Discount PKR', 'Total PKR', 'Notes', 'Order Time (UTC ms)', 'Payment Status', 'Expected By'];
 // Column positions in the Orders tab (0 = first column). Please do not move these columns.
-var OC = { NO: 0, STATUS: 1, TIME: 2, NAME: 3, PHONE: 4, METHOD: 5, AREA: 6, ADDRESS: 7, DATE: 8, SLOT: 9, PAYMENT: 10, ITEMS: 11, SUB: 12, FEE: 13, DISC: 14, TOTAL: 15, NOTES: 16, MS: 17, PAYST: 18 };
+var OC = { NO: 0, STATUS: 1, TIME: 2, NAME: 3, PHONE: 4, METHOD: 5, AREA: 6, ADDRESS: 7, DATE: 8, SLOT: 9, PAYMENT: 10, ITEMS: 11, SUB: 12, FEE: 13, DISC: 14, TOTAL: 15, NOTES: 16, MS: 17, PAYST: 18, EXPBY: 19 };
 
 var BANK = 'Bank transfer / JazzCash';
 var CASH_PICKUP = 'Pay at pickup (cash)';
 var PAY_STATES = ['Pay on delivery', 'Pay at pickup', 'Waiting for payment', 'Paid'];
+
+// The "As soon as possible" settings. addAsapSettings() adds these to a Settings tab you already have.
+var ASAP_SETTING_ROWS = [
+  ['ASAP Start Time', '09:00', 'Earliest time of day for "As soon as possible" orders. Pakistan time, 24-hour, like 09:00.'],
+  ['ASAP Last Order Time', '22:15', 'Last time of day an "As soon as possible" order can be placed. Pakistan time, 24-hour, like 22:15.'],
+  ['ASAP Delivery Minutes', '45-60', 'How long a delivery takes. Two numbers with a dash, like 45-60. The bigger number is used for "Expected By".'],
+  ['ASAP Pickup Minutes', '20-30', 'How long until a pickup order is ready. Two numbers with a dash, like 20-30. The bigger number is used for "Expected By".']
+];
 
 var SETTING_ROWS = [
   ['Bakery Name', 'Crumbs & Co.', 'Shown on the website and in WhatsApp messages.'],
@@ -53,7 +61,7 @@ var SETTING_ROWS = [
   ['JazzCash Number', '0300 0000000', ''],
   ['JazzCash Title', 'Crumbs and Co.', ''],
   ['Payment Note', 'After you pay, tap I have paid on the next screen. We confirm your payment before we start baking.', 'Shown under the account details at checkout.']
-];
+].concat(ASAP_SETTING_ROWS);
 
 var OPTION_ROWS = [
   ['Size', '1 lb', 1600, 1, 'Price of the plain cake in this size.'],
@@ -404,6 +412,54 @@ function addPaymentColumn() {
   try { SpreadsheetApp.getUi().alert(msg); } catch (e) { console.log(msg); }
 }
 
+/**
+ * Run this ONCE from the Apps Script editor on a sheet you already have.
+ * 1. Settings tab: adds the four "As soon as possible" rows at the bottom. Rows that are already there (and every other row) are not touched.
+ * 2. Orders tab: adds the "Expected By" column at the END (nothing else moves). Old orders keep it empty.
+ */
+function addAsapSettings() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var parts = [];
+
+  var set = ss.getSheetByName(TAB.SETTINGS);
+  if (!set) {
+    parts.push('There is no Settings tab yet. Please run setup first.');
+  } else {
+    var existing = {};
+    if (set.getLastRow() > 1) set.getRange(2, 1, set.getLastRow() - 1, 1).getValues().forEach(function (r) { existing[norm_(r[0])] = true; });
+    var add = ASAP_SETTING_ROWS.filter(function (r) { return !existing[norm_(r[0])]; });
+    if (add.length) {
+      var start = set.getLastRow() + 1;
+      ensureRows_(set, start + add.length - 1);
+      set.getRange(start, 2, add.length, 1).setNumberFormat('@'); // keep "09:00" and "45-60" exactly as typed
+      set.getRange(start, 1, add.length, 3).setValues(add).setWrap(true);
+    }
+    parts.push('Settings: ' + add.length + ' ASAP row' + (add.length === 1 ? '' : 's') + ' added.');
+  }
+
+  var sh = ss.getSheetByName(TAB.ORDERS);
+  if (!sh) {
+    parts.push('There is no Orders tab yet. Please run setup first.');
+  } else {
+    var col = OC.EXPBY + 1;
+    var head = sh.getLastColumn() ? sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm_) : [];
+    if (head.indexOf(norm_(ORDER_HEADERS[OC.EXPBY])) > -1) {
+      parts.push('Orders: the Expected By column is already there.');
+    } else {
+      if (sh.getMaxColumns() < col) sh.insertColumnsAfter(sh.getMaxColumns(), col - sh.getMaxColumns());
+      sh.getRange(1, col).setValue(ORDER_HEADERS[OC.EXPBY]).setFontWeight('bold').setFontColor('#fff6e9').setBackground('#4a2c1d').setVerticalAlignment('middle');
+      ensureRows_(sh, 5001);
+      sh.getRange(2, col, 5000, 1).setNumberFormat('@');
+      sh.setColumnWidth(col, 120);
+      parts.push('Orders: the Expected By column was added.');
+    }
+  }
+
+  CacheService.getScriptCache().remove('all_v1'); // so the website sees the new settings straight away
+  var msg = 'Done! ' + parts.join(' ');
+  try { SpreadsheetApp.getUi().alert(msg); } catch (e) { console.log(msg); }
+}
+
 function getOrCreate_(ss, name) { return ss.getSheetByName(name) || ss.insertSheet(name); }
 
 function ensureRows_(sh, rows) {
@@ -476,13 +532,13 @@ function setupOrders_(ss) {
   var sh = getOrCreate_(ss, TAB.ORDERS);
   writeHeaders_(sh, ORDER_HEADERS);
   ensureRows_(sh, 5001);
-  var textCols = [OC.NO, OC.STATUS, OC.TIME, OC.NAME, OC.PHONE, OC.METHOD, OC.AREA, OC.ADDRESS, OC.DATE, OC.SLOT, OC.PAYMENT, OC.ITEMS, OC.NOTES];
+  var textCols = [OC.NO, OC.STATUS, OC.TIME, OC.NAME, OC.PHONE, OC.METHOD, OC.AREA, OC.ADDRESS, OC.DATE, OC.SLOT, OC.PAYMENT, OC.ITEMS, OC.NOTES, OC.EXPBY];
   textCols.forEach(function (c) { sh.getRange(2, c + 1, 5000, 1).setNumberFormat('@'); });
   [OC.SUB, OC.FEE, OC.DISC, OC.TOTAL].forEach(function (c) { sh.getRange(2, c + 1, 5000, 1).setNumberFormat('#,##0'); });
   sh.getRange(2, OC.MS + 1, 5000, 1).setNumberFormat('0');
   sh.getRange(2, OC.PAYST + 1, 5000, 1).setNumberFormat('@').setDataValidation(listRule_(PAY_STATES, false)); // the Payment Status dropdown
   sh.getRange(2, OC.STATUS + 1, 5000, 1).setDataValidation(listRule_(STATUSES, false)); // the Status dropdown
-  var widths = [90, 130, 160, 150, 120, 80, 120, 240, 100, 170, 160, 360, 100, 100, 100, 100, 220, 140, 150];
+  var widths = [90, 130, 160, 150, 120, 80, 120, 240, 100, 170, 160, 360, 100, 100, 100, 100, 220, 140, 150, 120];
   widths.forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
   var rng = sh.getRange('B2:B5001');
   function rule(text, bg) { return SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(text).setBackground(bg).setRanges([rng]).build(); }
@@ -514,6 +570,25 @@ function payState_(status, method, payment) {
 }
 function money_(n) { return 'Rs ' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function todayPK_() { return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'); }
+function nowPKMin_() { var t = Utilities.formatDate(new Date(), TZ, 'HH:mm').split(':'); return Number(t[0]) * 60 + Number(t[1]); } // minutes since midnight, Pakistan time
+function clock_(min) { var h = Math.floor(min / 60) % 24, m = min % 60; return (h % 12 || 12) + ':' + (m < 10 ? '0' : '') + m + (h >= 12 ? ' pm' : ' am'); }
+function clockOf_(ms) { return Utilities.formatDate(new Date(ms), TZ, 'h:mm a').toLowerCase(); } // for example 10:50 pm
+// "22:15" or "10:15 pm" -> minutes since midnight. Anything else -> the fallback.
+function parseClock_(v, d) {
+  var m = /^\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*$/i.exec(String(v == null ? '' : v));
+  if (!m) return d;
+  var h = Number(m[1]), mi = m[2] ? Number(m[2]) : 0, ap = (m[3] || '').toLowerCase();
+  if (ap) { if (h < 1 || h > 12) return d; h = h % 12 + (ap === 'pm' ? 12 : 0); }
+  return h > 23 || mi > 59 ? d : h * 60 + mi;
+}
+// "45-60" -> { min: 45, max: 60 }. A single number like "30" means 30-30. Anything else -> the fallback.
+function parseRange_(v, lo, hi) {
+  var t = String(v == null ? '' : v), m = /^\s*(\d+)\s*(?:-|–|—|to)\s*(\d+)\s*$/i.exec(t) || /^\s*(\d+)\s*$/.exec(t);
+  if (!m) return { min: lo, max: hi };
+  var a = Number(m[1]), b = m[2] === undefined ? a : Number(m[2]);
+  if (b < a) { var x = a; a = b; b = x; }
+  return b > 0 ? { min: a, max: b } : { min: lo, max: hi };
+}
 function addDays_(ymd, n) {
   var p = ymd.split('-'), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
   d.setUTCDate(d.getUTCDate() + n);
@@ -609,7 +684,11 @@ function getSettings_() {
     accepting: yes_(s('acceptingorders', 'Yes')),
     cod: yes_(s('cashondelivery', 'Yes')),
     slots: s('timeslots', '').split(',').map(function (x) { return x.trim(); }).filter(Boolean),
-    name: s('bakeryname', 'Crumbs & Co.')
+    name: s('bakeryname', 'Crumbs & Co.'),
+    asapStart: parseClock_(s('asapstarttime', ''), 9 * 60),
+    asapEnd: parseClock_(s('asaplastordertime', ''), 22 * 60 + 15),
+    asapDel: parseRange_(s('asapdeliveryminutes', ''), 45, 60),
+    asapPick: parseRange_(s('asappickupminutes', ''), 20, 30)
   };
 }
 
@@ -647,7 +726,8 @@ function getAllCached_() {
  * Track an order. The visitor must give the PHONE number. The order number is optional.
  *   phone only      -> that phone's orders from the last 30 days (newest first): order number, date and status ONLY.
  *   phone + order   -> that one order: status, date and Delivery/Pickup (so the right steps are shown).
- * The one order also returns its payment state only (Waiting for payment, Paid, Pay on delivery, Pay at pickup).
+ * The one order also returns its payment state only (Waiting for payment, Paid, Pay on delivery, Pay at pickup),
+ * and "Expected By" (a time like 10:50 pm, empty for scheduled orders). That time is not private.
  * Names, addresses, items, amounts and account details are NEVER returned. Wrong tries are limited per phone number.
  */
 function trackOrder_(orderNo, phone) {
@@ -675,7 +755,7 @@ function trackOrder_(orderNo, phone) {
       var st = String(r[OC.STATUS]).trim(), ms = Number(r[OC.MS]) || null;
       var order = { no: String(r[OC.NO]).trim(), status: STATUSES.indexOf(st) > -1 ? st : 'Received', orderTime: ms };
       if (no) {
-        if (order.no.toUpperCase() === no) { order.method = r[OC.METHOD] === 'Pickup' ? 'Pickup' : 'Delivery'; order.payment = payState_(r[OC.PAYST], r[OC.METHOD], r[OC.PAYMENT]); found = order; break; }
+        if (order.no.toUpperCase() === no) { order.method = r[OC.METHOD] === 'Pickup' ? 'Pickup' : 'Delivery'; order.payment = payState_(r[OC.PAYST], r[OC.METHOD], r[OC.PAYMENT]); order.expectedBy = String(r[OC.EXPBY] == null ? '' : r[OC.EXPBY]).trim(); found = order; break; }
       } else if (ms && ms >= cutoff && list.length < 30) {
         list.push(order);
       }
@@ -684,7 +764,7 @@ function trackOrder_(orderNo, phone) {
 
   if (no ? found : list.length) {
     try { cache.remove(key); } catch (e) { /* ignore */ }
-    if (no) return { ok: true, mode: 'one', orderNo: found.no, status: found.status, orderTime: found.orderTime, method: found.method, payment: found.payment };
+    if (no) return { ok: true, mode: 'one', orderNo: found.no, status: found.status, orderTime: found.orderTime, method: found.method, payment: found.payment, expectedBy: found.expectedBy };
     return { ok: true, mode: 'list', orders: list };
   }
   try { cache.put(key, String(fails + 1), 900); cache.put(all, String(allFails + 1), 600); } catch (e) { /* ignore */ }
@@ -746,15 +826,23 @@ function placeOrder_(d) {
   if (payment !== BANK && !(payment === cashLabel && set.cod)) return fail_('Please choose how you will pay.');
   var payStatus = payment === BANK ? 'Waiting for payment' : method === 'Pickup' ? 'Pay at pickup' : 'Pay on delivery';
 
-  // The time slot is optional. When none is chosen we save "Any time".
-  var slot = safeText_(d.slot, 40);
-  if (!slot || slot.toLowerCase() === 'any time') slot = 'Any time';
-  else if (set.slots.length && set.slots.map(function (s) { return s.toLowerCase(); }).indexOf(slot.toLowerCase()) === -1) return fail_('Please choose a time slot from the list, or choose Any time.');
-  var date = String(d.date || '');
-  if (!validDate_(date)) return fail_('Please pick a date.');
   var today = todayPK_();
-  if (date < today) return fail_('That date has passed. Please pick another day.');
-  if (date > addDays_(today, 90)) return fail_('Please pick a date within the next 90 days.');
+  var asap = d.asap === true, slot, date;
+  if (asap) {
+    // As soon as possible: only today, and only between the ASAP start and last order times (Pakistan time). The browser's date and slot are ignored.
+    var nowMin = nowPKMin_();
+    if (nowMin < set.asapStart || nowMin > set.asapEnd) return fail_('Sorry, we are closed for ASAP orders right now. They open at ' + clock_(set.asapStart) + '. Please choose Schedule for later.');
+    date = today; slot = 'ASAP';
+  } else {
+    // The time slot is optional. When none is chosen we save "Any time".
+    slot = safeText_(d.slot, 40);
+    if (!slot || slot.toLowerCase() === 'any time') slot = 'Any time';
+    else if (set.slots.length && set.slots.map(function (s) { return s.toLowerCase(); }).indexOf(slot.toLowerCase()) === -1) return fail_('Please choose a time slot from the list, or choose Any time.');
+    date = String(d.date || '');
+    if (!validDate_(date)) return fail_('Please pick a date.');
+    if (date < today) return fail_('That date has passed. Please pick another day.');
+    if (date > addDays_(today, 90)) return fail_('Please pick a date within the next 90 days.');
+  }
 
   // 3. Items: look up EVERY price in the sheet. Prices sent by the browser are ignored.
   var items = Array.isArray(d.items) ? d.items : [];
@@ -788,6 +876,7 @@ function placeOrder_(d) {
     lines.push({ label: label, qty: qty, lineTotal: unitPrice * qty });
     subtotal += unitPrice * qty;
   }
+  if (hasCake && asap) return fail_('Custom cakes need ' + (set.noticeDays === 1 ? '1 day\'s' : set.noticeDays > 1 ? set.noticeDays + ' days\'' : 'some') + ' notice, so they cannot be ready as soon as possible. Please choose Schedule for later.');
   if (hasCake && date < addDays_(today, set.noticeDays)) return fail_('Custom cakes need at least ' + set.noticeDays + ' day' + (set.noticeDays === 1 ? '' : 's') + ' notice. Please pick a later date.');
 
   // 4. Totals, worked out here and nowhere else
@@ -799,7 +888,8 @@ function placeOrder_(d) {
   // 5. Save the order (one at a time, so two orders can never get the same number)
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
-  var orderNo, nowMs = Date.now();
+  var orderNo, nowMs = Date.now(), expectedBy = '';
+  if (asap) expectedBy = clockOf_(nowMs + (method === 'Delivery' ? set.asapDel.max : set.asapPick.max) * 60000); // order time + the longest wait
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sh = ss.getSheetByName(TAB.ORDERS) || (setupOrders_(ss), ss.getSheetByName(TAB.ORDERS));
@@ -808,7 +898,7 @@ function placeOrder_(d) {
     if (last > 1) sh.getRange(2, 1, last - 1, 1).getValues().forEach(function (r) { var m = /^CC-(\d+)$/i.exec(String(r[0]).trim()); if (m) maxNo = Math.max(maxNo, Number(m[1])); });
     orderNo = 'CC-' + (maxNo + 1);
     var itemsText = lines.map(function (l) { return l.qty + ' x ' + l.label + ' = ' + money_(l.lineTotal); }).join('\n');
-    var row = [orderNo, 'Received', Utilities.formatDate(new Date(nowMs), TZ, 'dd MMM yyyy, hh:mm a'), name, phone, method, area, address, date, slot, payment, itemsText, subtotal, fee, discount, total, notes, nowMs, payStatus];
+    var row = [orderNo, 'Received', Utilities.formatDate(new Date(nowMs), TZ, 'dd MMM yyyy, hh:mm a'), name, phone, method, area, address, date, slot, payment, itemsText, subtotal, fee, discount, total, notes, nowMs, payStatus, expectedBy];
     var rng = sh.getRange(last + 1, 1, 1, ORDER_HEADERS.length);
     var fmts = row.map(function (v, c) { return (c >= OC.SUB && c <= OC.TOTAL) ? '#,##0' : c === OC.MS ? '0' : '@'; });
     rng.setNumberFormats([fmts]);
@@ -831,11 +921,12 @@ function placeOrder_(d) {
       MailApp.sendEmail({
         to: to,
         name: set.name + ' website',
-        subject: 'New ' + method.toUpperCase() + ' order ' + orderNo + ' - ' + money_(total) + (payment === BANK ? ' - WAITING FOR PAYMENT' : ''),
-        body: 'New website order ' + orderNo + ' - this is a ' + method.toUpperCase() + ' order.\n\n' +
+        subject: (asap ? '⚡ ASAP ' : '') + 'New ' + method.toUpperCase() + ' order ' + orderNo + ' - ' + money_(total) + (payment === BANK ? ' - WAITING FOR PAYMENT' : ''),
+        body: (asap ? 'Expected by ' + expectedBy + ' (' + (method === 'Delivery' ? 'delivery' : 'pickup') + ' as soon as possible)\n\n' : '') +
+          'New website order ' + orderNo + ' - this is a ' + method.toUpperCase() + ' order.\n\n' +
           'Name: ' + name + '\nPhone: ' + phone + '\nMethod: ' + method + '\n' +
           (method === 'Delivery' ? 'Area: ' + area + '\nAddress: ' + address + '\n' : '') +
-          'Needed on: ' + date + ', ' + slot + '\nPayment: ' + payment + '\n\n' +
+          (asap ? 'Needed: AS SOON AS POSSIBLE, today' : 'Needed on: ' + date + ', ' + slot) + '\nPayment: ' + payment + '\n\n' +
           lines.map(function (l) { return l.qty + ' x ' + l.label + ' = ' + money_(l.lineTotal); }).join('\n') + '\n\n' +
           'Subtotal: ' + money_(subtotal) + '\nDelivery fee: ' + money_(fee) + '\nOnline discount (' + set.discountPct + '% of items + delivery): -' + money_(discount) + '\nTOTAL: ' + money_(total) + '\n\n' +
           (notes ? 'Notes: ' + notes + '\n\n' : '') +
@@ -849,5 +940,5 @@ function placeOrder_(d) {
     console.warn('Order saved, but the email could not be sent: ' + err); // the order is safe in the sheet
   }
 
-  return { ok: true, orderNo: orderNo, subtotal: subtotal, deliveryFee: fee, discount: discount, total: total, items: lines };
+  return { ok: true, orderNo: orderNo, subtotal: subtotal, deliveryFee: fee, discount: discount, total: total, items: lines, asap: asap, expectedBy: expectedBy };
 }

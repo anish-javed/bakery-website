@@ -32,6 +32,21 @@
     function n(k, d) { var v = parseFloat(String(m[k]).replace(/[^0-9.]/g, "")); return isNaN(v) ? d : v; }
     function yes(v) { return ["yes", "y", "true", "1"].indexOf(String(v).toLowerCase()) > -1; }
     function list(v, sep) { return String(v || "").split(sep).map(function (x) { return x.trim(); }).filter(Boolean); }
+    // "22:15" or "10:15 pm" -> minutes since midnight; "45-60" -> { min: 45, max: 60 }. Bad or missing values use the defaults.
+    function clock(v, d) {
+      var c = /^\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*$/i.exec(String(v == null ? "" : v));
+      if (!c) return d;
+      var h = parseInt(c[1], 10), mi = c[2] ? parseInt(c[2], 10) : 0, ap = (c[3] || "").toLowerCase();
+      if (ap) { if (h < 1 || h > 12) return d; h = h % 12 + (ap === "pm" ? 12 : 0); }
+      return h > 23 || mi > 59 ? d : h * 60 + mi;
+    }
+    function range(v, lo, hi) {
+      var t = String(v == null ? "" : v), r = /^\s*(\d+)\s*(?:-|–|—|to)\s*(\d+)\s*$/i.exec(t) || /^\s*(\d+)\s*$/.exec(t);
+      if (!r) return { min: lo, max: hi };
+      var a = parseInt(r[1], 10), b = r[2] === undefined ? a : parseInt(r[2], 10);
+      if (b < a) { var x = a; a = b; b = x; }
+      return b > 0 ? { min: a, max: b } : { min: lo, max: hi };
+    }
     var wa = s("whatsappnumber", "923000000000").replace(/\D/g, "");
     if (wa.charAt(0) === "0") wa = "92" + wa.slice(1);
     return {
@@ -49,7 +64,9 @@
       slots: list(s("timeslots", "10:00 am - 12:00 pm, 12:00 pm - 2:00 pm, 2:00 pm - 4:00 pm, 4:00 pm - 6:00 pm, 6:00 pm - 8:00 pm"), ","),
       bank: s("bankname", ""), accountTitle: s("accounttitle", ""), accountNo: s("accountnumber", ""), iban: s("iban", ""),
       jazz: s("jazzcashnumber", ""), jazzTitle: s("jazzcashtitle", ""),
-      payNote: s("paymentnote", "We confirm your payment before we start baking.")
+      payNote: s("paymentnote", "We confirm your payment before we start baking."),
+      asapStart: clock(s("asapstarttime", ""), 9 * 60), asapEnd: clock(s("asaplastordertime", ""), 22 * 60 + 15),
+      asapDel: range(s("asapdeliveryminutes", ""), 45, 60), asapPick: range(s("asappickupminutes", ""), 20, 30)
     };
   }
 
@@ -112,7 +129,12 @@
     var n = (CC.store.get("demoNo", 1000)) + 1;
     CC.store.set("demoNo", n);
     var fee = p.method === "Delivery" ? d.settings.deliveryFee : 0, disc = Math.round((subtotal + fee) * d.settings.discountPct / 100);
-    return { ok: true, demo: true, orderNo: "DEMO-" + n, subtotal: subtotal, deliveryFee: fee, discount: disc, total: subtotal + fee - disc, items: items };
+    var expectedBy = "";
+    if (p.asap) { // order time + the longest wait, in Pakistan time (UTC+5)
+      var mx = (p.method === "Delivery" ? d.settings.asapDel : d.settings.asapPick).max;
+      expectedBy = CC.fmtClock(Math.floor(((Date.now() + 5 * 3600e3) % 86400000) / 60000) + mx);
+    }
+    return { ok: true, demo: true, orderNo: "DEMO-" + n, subtotal: subtotal, deliveryFee: fee, discount: disc, total: subtotal + fee - disc, items: items, asap: !!p.asap, expectedBy: expectedBy };
   }
 
   CC.placeOrder = function (payload) {
@@ -122,7 +144,7 @@
 
   // The phone number is required. The order number is optional:
   //   phone only    -> { ok, mode: "list", orders: [{ no, status, orderTime }] }  (last 30 days, newest first)
-  //   phone + order -> { ok, mode: "one", orderNo, status, orderTime, method, payment }  (payment = state only, never amounts)
+  //   phone + order -> { ok, mode: "one", orderNo, status, orderTime, method, payment, expectedBy }  (payment = state only, never amounts; expectedBy = "10:50 pm" for ASAP orders, else "")
   // Tracking answers are never taken from the browser cache.
   CC.track = function (orderNo, phone) {
     orderNo = String(orderNo || "").trim();
@@ -135,7 +157,7 @@
           var status = age < 60000 ? "Received" : age < 180000 ? "Baking" : age < 300000 ? (pickup ? "Ready for pickup" : "Out for delivery") : (pickup ? "Collected" : "Delivered");
           if (orderNo) {
             if (String(l.no).toLowerCase() !== orderNo.toLowerCase()) return resolve({ ok: false, error: "We could not find an order with these details. Please check the order number and phone number." });
-            return resolve({ ok: true, mode: "one", orderNo: l.no, status: status, orderTime: l.t, method: pickup ? "Pickup" : "Delivery", payment: l.payment === "Bank transfer / JazzCash" ? (age < 120000 ? "Waiting for payment" : "Paid") : pickup ? "Pay at pickup" : "Pay on delivery", demo: true });
+            return resolve({ ok: true, mode: "one", orderNo: l.no, status: status, orderTime: l.t, method: pickup ? "Pickup" : "Delivery", payment: l.payment === "Bank transfer / JazzCash" ? (age < 120000 ? "Waiting for payment" : "Paid") : pickup ? "Pay at pickup" : "Pay on delivery", expectedBy: l.asap ? l.expectedBy || "" : "", demo: true });
           }
           if (age > 30 * 86400000) return resolve({ ok: false, error: "We could not find any orders for this phone number in the last 30 days. Please check the number, or type your order number too." });
           resolve({ ok: true, mode: "list", orders: [{ no: l.no, status: status, orderTime: l.t }], demo: true });

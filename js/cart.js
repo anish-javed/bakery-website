@@ -3,7 +3,7 @@
   var CC = window.CC, esc = CC.esc, icons = CC.art.icons;
   var $ = function (id) { return document.getElementById(id); };
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var d, s, formStart = Date.now(), done = false, busy = false;
+  var d, s, formStart = Date.now(), done = false, busy = false, pickedWhen = false; // pickedWhen: the customer chose a "when" button themselves
   var BANK = "Bank transfer / JazzCash", CASH_PICKUP = "Pay at pickup (cash)";
 
   CC.boot($("cart-load"), function (data) {
@@ -16,6 +16,7 @@
 
   function method() { var r = document.querySelector('input[name="method"]:checked'); return r ? r.value : "Delivery"; }
   function payment() { var r = document.querySelector('input[name="payment"]:checked'); return r ? r.value : ""; }
+  function when() { var r = document.querySelector('input[name="when"]:checked'); return r ? r.value : "later"; }
   function lines() { return CC.cart.lines(); }
 
   /* ---------- form setup ---------- */
@@ -44,6 +45,29 @@
     $("delivery-fields").hidden = !del;
     $("pickup-fields").hidden = del;
     $("date-label").textContent = del ? "Delivery date" : "Pickup date";
+    syncWhen();
+  }
+
+  /* ---------- "When do you want it?" ---------- */
+  function mins(r) { return r.min === r.max ? r.max + "" : r.min + "-" + r.max; }
+  // Can this order be "as soon as possible" right now? Only today, between the ASAP start and last order times (Pakistan time), and not with a custom cake.
+  function asapState() {
+    if (CC.cart.hasCake()) {
+      var n = s.noticeDays;
+      return { ok: false, why: n > 0 ? "Custom cakes need " + (n === 1 ? "1 day's" : n + " days'") + " notice, please schedule" : "Custom cakes cannot be made as soon as possible, please schedule" };
+    }
+    var now = CC.nowPKMinutes();
+    if (now < s.asapStart || now > s.asapEnd) return { ok: false, why: "Closed for ASAP orders, opens at " + CC.fmtClock(s.asapStart) };
+    return { ok: true, why: method() === "Delivery" ? "in about " + mins(s.asapDel) + " minutes" : "ready in about " + mins(s.asapPick) + " minutes" };
+  }
+
+  function syncWhen() {
+    var st = asapState(), asap = document.querySelector('input[name="when"][value="asap"]'), later = document.querySelector('input[name="when"][value="later"]');
+    asap.disabled = !st.ok;
+    $("asap-sub").textContent = st.why;
+    if (!st.ok) later.checked = true; // ASAP is not possible: Schedule for later is selected
+    else if (!pickedWhen) asap.checked = true; // ASAP is the default whenever it is available
+    $("later-fields").hidden = when() === "asap";
   }
 
   function syncPay() {
@@ -100,7 +124,7 @@
       if (last && last.items && last.items.length) $("empty-cart").insertAdjacentHTML("beforeend", '<p style="margin-top:14px"><button class="btn btn-ghost" data-act="reorder">Reorder your last order (' + esc(last.no) + ")</button></p>");
       return;
     }
-    renderLines(); renderNotices(); renderSuggest(); renderSummary(); setupDate(); syncPay();
+    renderLines(); renderNotices(); renderSuggest(); renderSummary(); setupDate(); syncWhen(); syncPay();
   }
 
   function renderLines() {
@@ -159,6 +183,8 @@
     window.addEventListener("cc:cart", renderAll);
     document.querySelectorAll('input[name="method"]').forEach(function (r) { r.addEventListener("change", function () { syncMethod(); renderNotices(); renderSummary(); syncPay(); }); });
     $("pay-choices").addEventListener("change", syncPay);
+    $("when-choices").addEventListener("change", function () { pickedWhen = true; syncWhen(); });
+    setInterval(function () { if (!done) syncWhen(); }, 30000); // ASAP can close while the page is open
     $("date").addEventListener("input", function () { renderSlots(); clearErr("f-date"); });
     $("slot").addEventListener("change", function () { clearErr("f-slot"); });
     $("phone").addEventListener("input", function () {
@@ -204,18 +230,20 @@
     chk("name", name.length >= 2);
     chk("phone", /^03\d{2}-\d{7}$/.test(phone));
     if (del) { chk("area", !!$("area").value); chk("address", $("address").value.trim().length >= 8); }
-    var min = minDate();
-    chk("date", !!date && date >= min && date <= CC.addDays(CC.todayPK(), 90), !date ? "Please pick a date." : "Earliest date is " + CC.fmtDate(min) + ".");
+    if (when() === "later") { // an ASAP order has no date to pick
+      var min = minDate();
+      chk("date", !!date && date >= min && date <= CC.addDays(CC.todayPK(), 90), !date ? "Please pick a date." : "Earliest date is " + CC.fmtDate(min) + ".");
+    }
     return bad;
   }
 
   function buildPayload() {
-    var ls = lines(), del = method() === "Delivery";
+    var ls = lines(), del = method() === "Delivery", asap = when() === "asap";
     return {
       items: ls.map(function (l) { return l.kind === "cake" ? { cake: { size: l.cake.size, flavour: l.cake.flavour, frosting: l.cake.frosting, message: l.cake.message || "" }, qty: l.qty } : { name: l.name, qty: l.qty }; }),
       name: $("name").value.trim(), phone: $("phone").value.trim(), method: method(),
       area: del ? $("area").value : "", address: del ? $("address").value.trim() : "",
-      date: $("date").value, slot: $("slot").value || "Any time", payment: payment(), notes: $("notes").value.trim(),
+      asap: asap, date: asap ? CC.todayPK() : $("date").value, slot: asap ? "ASAP" : $("slot").value || "Any time", payment: payment(), notes: $("notes").value.trim(),
       expectedTotal: CC.calc(ls, method(), s).total,
       hp: $("hp").value, elapsed: Date.now() - formStart
     };
@@ -230,6 +258,10 @@
     e.preventDefault();
     if (busy) return;
     renderNotices();
+    if (when() === "asap" && !asapState().ok) { // ASAP closed (or a cake was added) since the page opened
+      syncWhen();
+      return fail("Sorry, as soon as possible is not available right now, so we switched to Schedule for later. Please pick a date and place your order again.");
+    }
     var bad = validate(), b = blockers();
     if (!s.accepting) return $("notices").scrollIntoView({ block: "center" });
     if (b.soldOut.length || b.pickupOnly.length) return $("notices").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
@@ -250,7 +282,7 @@
   /* ---------- thank-you ---------- */
   function success(res, payload) {
     var ls = lines();
-    CC.store.last.set({ no: res.orderNo, t: Date.now(), phone: payload.phone, method: payload.method, payment: payload.payment, total: res.total, items: ls.map(function (l) { return l.kind === "cake" ? { cake: l.cake, qty: l.qty } : { name: l.name, qty: l.qty }; }) });
+    CC.store.last.set({ no: res.orderNo, t: Date.now(), phone: payload.phone, method: payload.method, payment: payload.payment, total: res.total, asap: !!res.asap, expectedBy: res.expectedBy || "", items: ls.map(function (l) { return l.kind === "cake" ? { cake: l.cake, qty: l.qty } : { name: l.name, qty: l.qty }; }) });
     CC.store.set("customer", { name: payload.name, phone: payload.phone });
     done = true;
     CC.cart.clear();
@@ -262,7 +294,7 @@
     if (res.discount) wa.push("Online discount (" + s.discountPct + "%" + (payload.method === "Delivery" ? " of items + delivery" : "") + "): -" + CC.fmt(res.discount));
     wa.push("Total: " + CC.fmt(res.total), "");
     wa.push(payload.method === "Delivery" ? "Delivery to: " + payload.area + ", " + payload.address : "Pickup from the bakery");
-    wa.push("Date: " + CC.fmtDate(payload.date) + ", " + payload.slot, "Payment: " + payload.payment, "Name: " + payload.name, "Phone: " + payload.phone);
+    wa.push(res.asap ? "When: As soon as possible" : "Date: " + CC.fmtDate(payload.date) + ", " + payload.slot, "Payment: " + payload.payment, "Name: " + payload.name, "Phone: " + payload.phone);
 
     var items = (res.items || []).map(function (i) { return '<div class="sumrow"><span>' + i.qty + " &times; " + esc(i.label) + "</span><span>" + CC.fmt(i.lineTotal) + "</span></div>"; }).join("");
     var bill = items + '<div class="sumrow"><span>Subtotal</span><span>' + CC.fmt(res.subtotal) + "</span></div>" +
@@ -275,12 +307,13 @@
     var payNote = payload.payment === BANK
       ? '<div style="text-align:left"><h3 style="margin:0 0 8px">How to pay</h3>' + CC.payPanel({ orderNo: res.orderNo, method: payload.method, phone: payload.phone, total: res.total }) + "</div>"
       : '<div class="alert ok" style="text-align:left">' + (payload.method === "Pickup" ? "You will pay when you pick it up." : "You will pay when it arrives.") + "</div>";
-    var demo = res.demo ? '<div class="alert info">This was a demo order. It was not saved anywhere.</div>' : "";
+    var eta = res.asap && res.expectedBy ? '<div class="alert ok" style="font-weight:800">' + (payload.method === "Pickup" ? "Ready by about " : "Expected by about ") + esc(res.expectedBy) + "</div>" : "";
+    var demo = res.demo ?'<div class="alert info">This was a demo order. It was not saved anywhere.</div>' : "";
 
     $("cart-main").hidden = true; $("empty-cart").hidden = true; $("cart-head").hidden = true;
     var t = $("thanks");
     t.innerHTML = '<div class="confetti-wrap" id="confetti"></div><span class="hand">Thank you, ' + esc(payload.name.split(/\s+/)[0]) + "!</span><h1>Your order is in</h1><p>Your order number is</p>" +
-      '<div class="order-no">' + esc(res.orderNo) + "</div><p>Please save this number. With your phone number, it lets you follow your order on the Track Order page.</p>" + demo + note +
+      '<div class="order-no">' + esc(res.orderNo) + "</div><p>Please save this number. With your phone number, it lets you follow your order on the Track Order page.</p>" + eta + demo + note +
       '<div class="panel" style="text-align:left">' + bill + "</div>" + payNote +
       '<div class="actions"><a class="btn btn-wa" target="_blank" rel="noopener" href="' + esc(CC.waLink(wa.join("\n"))) + '">Send this order on WhatsApp</a>' +
       '<a class="btn btn-caramel" href="track.html?no=' + encodeURIComponent(res.orderNo) + '">Track this order</a><a class="btn btn-ghost" href="menu.html">Order more treats</a></div>';

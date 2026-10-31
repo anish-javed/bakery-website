@@ -138,7 +138,7 @@
     var s = CC.data ? CC.data.settings : null;
 
     if (fresh) {
-      r.innerHTML = '<div class="panel"><div class="center"><span class="hand">Order ' + esc(orderNo) + '</span><h2 id="t-status" aria-live="polite"></h2><p class="muted" id="t-placed"></p></div>' +
+      r.innerHTML = '<div class="panel"><div class="center"><span class="hand">Order ' + esc(orderNo) + '</span><h2 id="t-status" aria-live="polite"></h2><p class="muted" id="t-placed"></p><p id="t-eta" style="font-weight:800;margin:6px 0 0"></p></div>' +
         '<div class="progress" id="prog" style="--p:0"><div class="fill"></div>' +
         steps.map(function (x) { return '<div class="pstep"><div class="dot"></div>' + esc(x[0]) + "</div>"; }).join("") + "</div>" +
         '<p class="center" id="t-text" style="font-weight:700;margin:18px 0 8px"></p>' +
@@ -148,6 +148,8 @@
     }
     $("t-status").textContent = cancelled ? "Order cancelled" : st;
     $("t-placed").textContent = res.orderTime ? "Placed on " + CC.fmtDateTime(res.orderTime) : "";
+    // ASAP orders: the time the bakery expects to deliver / have it ready (hidden once the order is finished)
+    $("t-eta").textContent = res.expectedBy && !FINAL[st] ? (method === "Pickup" ? "Ready by about " : "Expected by about ") + res.expectedBy : "";
     $("t-text").textContent = (TEXT[st] || "") + (cancelled && s ? " Call " + s.phone + "." : "");
 
     var prog = $("prog");

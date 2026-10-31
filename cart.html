@@ -77,7 +77,15 @@
             </div>
             <div id="pickup-fields" class="alert info" hidden></div>
 
-            <div class="row two">
+            <div class="field" id="f-when">
+              <span class="label">When do you want it?</span>
+              <div class="choice-row" id="when-choices">
+                <label class="choice big"><input type="radio" name="when" value="asap" checked><span><b>As soon as possible</b><small id="asap-sub"></small></span></label>
+                <label class="choice big"><input type="radio" name="when" value="later"><span><b>Schedule for later</b><small>Pick a day and time</small></span></label>
+              </div>
+            </div>
+
+            <div class="row two" id="later-fields" hidden>
               <div class="field" id="f-date">
                 <label for="date" id="date-label">Date</label>
                 <input id="date" name="date" type="date">
