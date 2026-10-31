@@ -166,7 +166,7 @@ If you already had the Orders tab before this payment feature:
 1. Paste the new `google-apps-script.gs` into Apps Script and save.
 2. Choose the function **addPaymentColumn** and click **Run**. It adds the Payment Status column at the end and fills old orders (nothing else is changed).
 3. **Deploy > Manage deployments**, click the pencil, choose **New version**, and click **Deploy**.
-4. Your **Payment Note** in the Settings tab may still say "send the screenshot". Change it to: `After you pay, tap I've paid on the next screen. We confirm your payment before we start baking.`
+4. Your **Payment Note** in the Settings tab may still say "send the screenshot". Change it to: `After you pay, tap I have paid on the next screen. We confirm your payment before we start baking.`
 
 ---
 

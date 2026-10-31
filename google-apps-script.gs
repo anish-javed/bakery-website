@@ -52,7 +52,7 @@ var SETTING_ROWS = [
   ['IBAN', 'PK00 DEMO 0000 0000 0000 0000', ''],
   ['JazzCash Number', '0300 0000000', ''],
   ['JazzCash Title', 'Crumbs and Co.', ''],
-  ['Payment Note', 'After you pay, tap I've paid on the next screen. We confirm your payment before we start baking.', 'Shown under the account details at checkout.']
+  ['Payment Note', 'After you pay, tap I have paid on the next screen. We confirm your payment before we start baking.', 'Shown under the account details at checkout.']
 ];
 
 var OPTION_ROWS = [
