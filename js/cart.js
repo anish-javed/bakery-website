@@ -283,6 +283,7 @@
   function success(res, payload) {
     var ls = lines();
     CC.store.last.set({ no: res.orderNo, t: Date.now(), phone: payload.phone, method: payload.method, payment: payload.payment, total: res.total, asap: !!res.asap, expectedBy: res.expectedBy || "", items: ls.map(function (l) { return l.kind === "cake" ? { cake: l.cake, qty: l.qty } : { name: l.name, qty: l.qty }; }) });
+    CC.store.orders.add({ no: res.orderNo, total: res.total, payment: payload.payment, method: payload.method, expectedBy: res.expectedBy || "" });
     CC.store.set("customer", { name: payload.name, phone: payload.phone });
     done = true;
     CC.cart.clear();

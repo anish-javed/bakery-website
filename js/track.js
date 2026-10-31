@@ -149,7 +149,8 @@
     $("t-status").textContent = cancelled ? "Order cancelled" : st;
     $("t-placed").textContent = res.orderTime ? "Placed on " + CC.fmtDateTime(res.orderTime) : "";
     // ASAP orders: the time the bakery expects to deliver / have it ready (hidden once the order is finished)
-    $("t-eta").textContent = res.expectedBy && !FINAL[st] ? (method === "Pickup" ? "Ready by about " : "Expected by about ") + res.expectedBy : "";
+    var eta = res.expectedBy || (CC.store.orders.find(orderNo) || {}).expectedBy; // the sheet's time, or the one this browser saved
+    $("t-eta").textContent = eta && !FINAL[st] ? (method === "Pickup" ? "Ready by about " : "Expected by about ") + eta : "";
     $("t-text").textContent = (TEXT[st] || "") + (cancelled && s ? " Call " + s.phone + "." : "");
 
     var prog = $("prog");
@@ -179,8 +180,8 @@
     if (prev === pay && box.innerHTML) return pay; // nothing changed: keep the panel (and anything being copied)
     var html = '<div class="payst ' + (pay === "Paid" ? "ok" : pay === "Waiting for payment" ? "wait" : "cash") + '">' + esc(PAY_TEXT[pay]) + "</div>";
     if (pay === "Waiting for payment" && CC.data && CC.data.settings) {
-      var l = CC.store.last.get(), mine = l && String(l.no).toLowerCase() === String(orderNo).toLowerCase();
-      html += CC.payPanel({ orderNo: orderNo, method: method, phone: (current && current.phone) || "", total: mine ? l.total : 0 });
+      var mine = CC.store.orders.find(orderNo);
+      html += CC.payPanel({ orderNo: orderNo, method: method, phone: (current && current.phone) || "", total: mine ? mine.total : 0 });
     }
     box.innerHTML = html;
     box.className = "payline";

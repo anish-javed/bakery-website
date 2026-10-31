@@ -90,6 +90,24 @@
     set: function (o) { set("last", o); }
   };
 
+  // The last 10 orders placed in this browser, newest first: { no, total, payment, method, expectedBy }.
+  // Track Order uses them to show the amount to send. Orders from before this list existed are found through "last".
+  var orders = {
+    all: function () { return get("orders", []); },
+    add: function (o) {
+      var list = orders.all().filter(function (x) { return String(x.no).toLowerCase() !== String(o.no).toLowerCase(); });
+      list.unshift(o);
+      set("orders", list.slice(0, 10));
+    },
+    find: function (no) {
+      no = String(no || "").toLowerCase();
+      var hit = orders.all().filter(function (x) { return String(x.no).toLowerCase() === no; })[0];
+      if (hit) return hit;
+      var l = last.get();
+      return l && String(l.no).toLowerCase() === no ? l : null;
+    }
+  };
+
   /* ---------- price maths (the website's estimate; the sheet script recalculates everything) ---------- */
   CC.cakePrice = function (cfg, options) {
     if (!cfg || !options) return null;
@@ -106,7 +124,7 @@
     return { subtotal: subtotal, fee: fee, discount: discount, total: subtotal + fee - discount };
   };
 
-  CC.store = { get: get, set: set, cart: cart, favs: favs, last: last };
+  CC.store = { get: get, set: set, cart: cart, favs: favs, last: last, orders: orders };
   CC.cart = cart;
   CC.favs = favs;
 
