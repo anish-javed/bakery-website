@@ -259,7 +259,7 @@
     (res.items || []).forEach(function (i) { wa.push(i.qty + " x " + i.label + " = " + CC.fmt(i.lineTotal)); });
     wa.push("", "Subtotal: " + CC.fmt(res.subtotal));
     if (res.deliveryFee) wa.push("Delivery fee: " + CC.fmt(res.deliveryFee));
-    if (res.discount) wa.push("Online discount (on items + delivery): -" + CC.fmt(res.discount));
+    if (res.discount) wa.push("Online discount (" + s.discountPct + "%" + (payload.method === "Delivery" ? " of items + delivery" : "") + "): -" + CC.fmt(res.discount));
     wa.push("Total: " + CC.fmt(res.total), "");
     wa.push(payload.method === "Delivery" ? "Delivery to: " + payload.area + ", " + payload.address : "Pickup from the bakery");
     wa.push("Date: " + CC.fmtDate(payload.date) + ", " + payload.slot, "Payment: " + payload.payment, "Name: " + payload.name, "Phone: " + payload.phone);

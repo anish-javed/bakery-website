@@ -285,9 +285,10 @@
     var s = CC.data.settings, rows = "";
     function row(k, v, copy) { return v ? "<dt>" + k + "</dt><dd>" + esc(v) + ' <button class="copy" type="button" data-copy="' + esc(copy || v) + '">Copy</button></dd>' : ""; }
     if (o.total) rows += row("Amount to send", CC.fmt(o.total), String(Math.round(o.total)));
+    var noAmount = o.total ? "" : "<div style=\"margin-bottom:8px\"><b>Send the total shown when you ordered, or ask us on WhatsApp.</b></div>";
     rows += row("Order number", o.orderNo) + row("Bank", s.bank) + row("Account title", s.accountTitle) + row("Account no.", s.accountNo) + row("IBAN", s.iban) + row("JazzCash", s.jazz) + row("JazzCash name", s.jazzTitle);
     var msg = "Hi, I paid " + (o.total ? CC.fmt(o.total) + " " : "") + "for order " + o.orderNo + " (" + o.method + "). My phone: " + o.phone + ".";
-    return '<div class="paybox paypanel"><dl>' + rows + "</dl><div>If your app has a reason or note field, write your order number.</div>" +
+    return '<div class="paybox paypanel"><dl>' + rows + "</dl>" + noAmount + "<div>If your app has a reason or note field, write your order number.</div>" +
       '<div style="margin-top:12px"><a class="btn btn-wa" target="_blank" rel="noopener" href="' + esc(CC.waLink(msg)) + '">I\'ve paid</a></div></div>';
   };
   document.addEventListener("click", function (e) {
